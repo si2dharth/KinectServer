@@ -15,12 +15,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdL
 	hr = ICFS->OpenReader(&ICFR);
 	if (hr != 0) return 3;
 	ofstream out;
-	
+	int i = 4;
 	while (true) {
 		out.open("OUTPUT.bmp");
 		IColorFrame *ICF = nullptr;
 		hr = ICFR->AcquireLatestFrame(&ICF);
-		if (hr != 0) return 4;
+		if (hr != 0) return i; else i++;
 		IFrameDescription *IFD = nullptr;
 		hr = ICF->get_FrameDescription(&IFD);
 		int height, width;
