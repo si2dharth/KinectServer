@@ -68,6 +68,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="KinectProvider.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="TCPPipe.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="KinectProvider.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
