@@ -16,15 +16,16 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdL
 	if (hr != 0) return 3;
 
 	ofstream out;
-	int i = 4;
-	while (true) {
-		out.open("OUTPUT.bmp");
+	int i = 0;
+	while (i < 5) {
 		IColorFrame *ICF = nullptr;
 		hr = ICFR->AcquireLatestFrame(&ICF);
 		if (hr != 0) {
 			Sleep(1);
 			continue;
 		}
+		i++;
+		out.open(string("OUTPUT") + to_string(i) + ".raw", ios_base::binary);
 		IFrameDescription *IFD = nullptr;
 		hr = ICF->get_FrameDescription(&IFD);
 		int height, width;
@@ -32,11 +33,16 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdL
 		IFD->get_BytesPerPixel(&bytesPerPixel);
 		IFD->get_Height(&height);
 		IFD->get_Width(&width);
-		BYTE *frameData = new BYTE[bytesPerPixel * height * width];
-		ICF->CopyConvertedFrameDataToArray(bytesPerPixel * height * width, frameData, ColorImageFormat::ColorImageFormat_Rgba);
-		for (int i = 0; i < bytesPerPixel * height * width; i++)
-			out << frameData[i];
+		ColorImageFormat CIF;
+		hr = ICF->get_RawColorImageFormat(&CIF);
+		UINT size = bytesPerPixel * height * width;
+		UINT capacity = 0;
+		BYTE *raw = nullptr;
+		ICF->AccessRawUnderlyingBuffer(&capacity, &raw);
+		out.write((char*)raw, capacity);
+		//Image is in YUV2 format.
 		out.close();
-		delete[] frameData;
+		//delete[] raw;
+		ICF->Release();
 	}
 }
