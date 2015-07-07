@@ -140,3 +140,14 @@ void KinectProvider::stopAudioCapture() {
 	audioBeamReader = nullptr;
 }
 
+
+
+int KinectProvider::getImage(OUT BYTE **image, OUT UINT &arraySize) {
+	if (!colorFrameReader) throw error::ColorCaptureNotStarted;
+	IColorFrame *ICF = nullptr;
+	int hr = colorFrameReader->AcquireLatestFrame(&ICF);
+	if (hr != 0) return result::NotReady;
+	ICF->AccessRawUnderlyingBuffer(&arraySize, image);
+	ICF->Release();
+	return result::OK;
+}

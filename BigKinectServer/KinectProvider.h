@@ -23,7 +23,7 @@ public:
 	void startAudioCapture();
 	void stopAudioCapture();
 
-	int getImage(OUT BYTE* image, OUT int &arraySize);
+	int getImage(OUT BYTE **image, OUT UINT &arraySize);
 	int getBodyCount();
 	int getBodyData();
 	int getDepthMap();
@@ -33,7 +33,7 @@ public:
 
 
 
-	enum class error {
+	enum error {
 		SensorNotFound,
 		SensorNotReady,
 		
@@ -56,5 +56,12 @@ public:
 		AudioSourceNotReady,
 		CouldNotOpenAudioReader,
 		AudioCaptureNotStarted,
+
+		UnknownError,
+	};
+
+	enum result {
+		NotReady,
+		OK,
 	};
 };
