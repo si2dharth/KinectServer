@@ -151,3 +151,13 @@ int KinectProvider::getImage(OUT BYTE **image, OUT UINT &arraySize) {
 	ICF->Release();
 	return result::OK;
 }
+
+int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize) {
+	if (!infraredFrameReader) throw error::InfraredCaptureNotStarted;
+	IInfraredFrame *IIF = nullptr;
+	int hr = infraredFrameReader->AcquireLatestFrame(&IIF);
+	if (hr != 0) return result::NotReady;
+	IIF->AccessUnderlyingBuffer(&arraySize, image);
+	IIF->Release();
+	return result::OK;
+}

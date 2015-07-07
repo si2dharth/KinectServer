@@ -24,11 +24,11 @@ public:
 	void stopAudioCapture();
 
 	int getImage(OUT BYTE **image, OUT UINT &arraySize);
+	int getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize);
 	int getBodyCount();
 	int getBodyData();
 	int getDepthMap();
 	int getBodyMap();
-	int getInfraredImage();
 	int getAudioData();
 
 
