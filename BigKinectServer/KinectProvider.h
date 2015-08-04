@@ -3,6 +3,8 @@
 class KinectProvider {
 	IKinectSensor *sensor;
 
+	int audioUsers = 0, imageUsers = 0, infraredUsers = 0, bodyUsers = 0, bodyMapUsers = 0, depthUsers = 0;
+
 	IAudioBeamFrameReader *audioBeamReader;			//Returns various frames each time, with PCM values at 16 kHz and direction in each frame
 	IColorFrameReader *colorFrameReader;			//Returns YUV2 image
 	IBodyFrameReader *bodyFrameReader;				//Returns body joint data
@@ -14,8 +16,10 @@ public:
 	KinectProvider();
 	~KinectProvider();
 
-	void startColorCapture(bool infrared);
+	void startColorCapture();
 	void stopColorCapture();
+	void startInfraredCapture();
+	void stopInfraredCapture();
 	void startDepthMapCapture();
 	void stopDepthMapCapture();
 	void startBodyMapCapture();
