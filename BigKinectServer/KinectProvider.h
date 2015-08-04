@@ -3,12 +3,12 @@
 class KinectProvider {
 	IKinectSensor *sensor;
 
-	IAudioBeamFrameReader *audioBeamReader;
-	IColorFrameReader *colorFrameReader;
-	IBodyFrameReader *bodyFrameReader;
-	IBodyIndexFrameReader *bodyMapReader;
-	IDepthFrameReader *depthFrameReader;
-	IInfraredFrameReader *infraredFrameReader;
+	IAudioBeamFrameReader *audioBeamReader;			//Returns various frames each time, with PCM values at 16 kHz and direction in each frame
+	IColorFrameReader *colorFrameReader;			//Returns YUV2 image
+	IBodyFrameReader *bodyFrameReader;				//Returns body joint data
+	IBodyIndexFrameReader *bodyMapReader;			//Returns BYTE map
+	IDepthFrameReader *depthFrameReader;			//Returns UINT16 image
+	IInfraredFrameReader *infraredFrameReader;		//Returns UINT16 image
 
 public:
 	KinectProvider();
@@ -16,6 +16,8 @@ public:
 
 	void startColorCapture(bool infrared);
 	void stopColorCapture();
+	void startDepthMapCapture();
+	void stopDepthMapCapture();
 	void startBodyMapCapture();
 	void stopBodyMapCapture();
 	void startBodyDataCapture();
@@ -25,11 +27,13 @@ public:
 
 	int getImage(OUT BYTE **image, OUT UINT &arraySize);
 	int getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize);
-	int getBodyCount();
-	int getBodyData();
-	int getDepthMap();
-	int getBodyMap();
-	int getAudioData();
+	int getBodyCount(OUT int &bodyCount);
+	int getBodyData(OUT IBody **bodies);
+	int getDepthMap(OUT UINT16 **image, OUT UINT &arraySize);
+	int getBodyMap(OUT BYTE **map, OUT UINT &arraySize);
+	int getAudioData(int index, OUT IStream *stream);
+
+	void processAudioData();
 
 
 
@@ -48,6 +52,10 @@ public:
 		BodyMapSourceNotReady,
 		CouldNotOpenBodyMapReader,
 		BodyMapCaptureNotStarted,
+
+		DepthMapSourceNotReady,
+		CouldNotOpenDepthMapReader,
+		DepthMapCaptureNotStarted,
 
 		BodyDataSourceNotReady,
 		CouldNotOpenBodyDataReader,

@@ -1,4 +1,6 @@
 #include "KinectProvider.h"
+#include <set>
+using namespace std;
 
 KinectProvider::KinectProvider() :
 	sensor(nullptr),
@@ -102,6 +104,25 @@ void KinectProvider::stopBodyDataCapture() {
 	bodyFrameReader = nullptr;
 }
 
+void KinectProvider::startDepthMapCapture() {
+	if (depthFrameReader) return;
+	IDepthFrameSource *IDS = nullptr;
+	int hr = sensor->get_DepthFrameSource(&IDS);
+	if (hr != 0) throw error::DepthMapSourceNotReady;
+	hr = IDS->OpenReader(&depthFrameReader);
+	IDS->Release();
+	if (hr != 0) {
+		depthFrameReader = nullptr;
+		throw error::CouldNotOpenDepthMapReader;
+	}
+}
+
+void KinectProvider::stopDepthMapCapture() {
+	if (!depthFrameReader) return;
+	depthFrameReader->Release();
+	depthFrameReader = nullptr;
+}
+
 void KinectProvider::startBodyMapCapture() {
 	if (bodyMapReader) return;
 	IBodyIndexFrameSource *IBIS = nullptr;
@@ -160,4 +181,59 @@ int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize) {
 	IIF->AccessUnderlyingBuffer(&arraySize, image);
 	IIF->Release();
 	return result::OK;
+}
+
+
+int KinectProvider::getBodyCount(OUT int &bodyCount) {
+	UINT cap = 0;
+	BYTE *buf;
+	int res = getBodyMap(&buf, cap);
+	if (res != result::OK) return res;
+	set<BYTE> bodyNumbers;
+	for (int i = 0; i < cap; i++)
+		bodyNumbers.insert(buf[i]);
+	bodyCount = bodyNumbers.size();
+	return result::OK;
+}
+
+int KinectProvider::getDepthMap(OUT UINT16 **image, OUT UINT &arraySize) {
+	if (!depthFrameReader) throw error::DepthMapCaptureNotStarted;
+	IDepthFrame *IDF = nullptr;
+	int hr = depthFrameReader->AcquireLatestFrame(&IDF);
+	if (hr != 0) return result::NotReady;
+	IDF->AccessUnderlyingBuffer(&arraySize, image);
+	IDF->Release();
+	return result::OK;
+}
+
+int KinectProvider::getBodyMap(OUT BYTE **map, OUT UINT &arraySize) {
+	if (!bodyMapReader) throw error::BodyMapCaptureNotStarted;
+	IBodyIndexFrame *IBIF = nullptr;
+	int hr = bodyMapReader->AcquireLatestFrame(&IBIF);
+	if (hr != 0) return result::NotReady;
+	IBIF->AccessUnderlyingBuffer(&arraySize, map);
+	IBIF->Release();
+	return result::OK;
+}
+
+int KinectProvider::getBodyData(OUT IBody **bodies) {
+	if (!bodyFrameReader) throw error::BodyDataCaptureNotStarted;
+	IBodyFrame *IBF = nullptr;
+	int hr = bodyFrameReader->AcquireLatestFrame(&IBF);
+	if (hr != 0) return result::NotReady;
+	IBF->GetAndRefreshBodyData(BODY_COUNT, bodies);
+	IBF->Release();
+	return result::OK;
+}
+
+void KinectProvider::processAudioData() {
+	IAudioBeamFrameList *IABFL = nullptr;
+	audioBeamReader->AcquireLatestBeamFrames(&IABFL);
+	UINT frmCount = 0;
+	IABFL->get_BeamCount(&frmCount);
+	for (int i = 0; i < frmCount; i++) {
+		IAudioBeamFrame *IABF = nullptr;
+		IABFL->OpenAudioBeamFrame(i, &IABF);
+		//IABF->
+	}
 }

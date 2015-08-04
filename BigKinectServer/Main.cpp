@@ -1,22 +1,16 @@
 #include "stdafx.h"
 #include <fstream>
-#include "KinectProvider.h"
+#include "BodyFrameProvider.h"
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdLine, int nShowCmd) {
 	KinectProvider kinect;
-	kinect.startColorCapture(true);
-	ofstream out;
-	
-	int i = 0;
-	while (i < 5) {
-		UINT capacity = 0;
-		UINT16 *raw = nullptr;
-		if (kinect.getInfraredImage(&raw, capacity) != KinectProvider::result::OK) continue;
-		i++;
-		out.open(string("OUTPUT") + to_string(i) + ".raw", ios_base::binary);
-		out.write((char*)raw, capacity*2);
-		//Image is in YUV2 format.
-		out.close();
-		//delete[] raw;
+	BodyFrameProvider bodies(&kinect);
+
+	while (1) {
+		bodies.updateFrame();
+		set<int> bds = bodies.getBodyIndices();
+		if (bds.size() == 0) continue;
+		Joint right = bodies.getJoint(*bds.begin(),JointType_HandRight);
+		SetCursorPos(right.Position.X * 1200 - 600, -right.Position.Y * 800 + 400);
 	}
 }
