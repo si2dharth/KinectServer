@@ -27,6 +27,8 @@ public:
 	*/
 	int send(string s);
 
+	int send(char *c, int length);
+
 	///Receive a message from the client
 	/**
 	This is a blocking function. It would wait for a message until atleast one byte has arrived.

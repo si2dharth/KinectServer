@@ -168,22 +168,30 @@ void KinectProvider::stopAudioCapture() {
 
 
 
-int KinectProvider::getImage(OUT BYTE **image, OUT UINT &arraySize) {
+int KinectProvider::getImage(OUT BYTE **image, OUT UINT &arraySize, bool copy) {
 	if (!colorFrameReader) throw error::ColorCaptureNotStarted;
 	IColorFrame *ICF = nullptr;
 	int hr = colorFrameReader->AcquireLatestFrame(&ICF);
 	if (hr != 0) return result::NotReady;
 	ICF->AccessRawUnderlyingBuffer(&arraySize, image);
+	if (copy) {
+		*image = new BYTE[arraySize];
+		ICF->CopyRawFrameDataToArray(arraySize, *image);
+	}
 	ICF->Release();
 	return result::OK;
 }
 
-int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize) {
+int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize, bool copy) {
 	if (!infraredFrameReader) throw error::InfraredCaptureNotStarted;
 	IInfraredFrame *IIF = nullptr;
 	int hr = infraredFrameReader->AcquireLatestFrame(&IIF);
 	if (hr != 0) return result::NotReady;
 	IIF->AccessUnderlyingBuffer(&arraySize, image);
+	if (copy) {
+		*image = new UINT16[arraySize];
+		IIF->CopyFrameDataToArray(arraySize, *image);
+	}
 	IIF->Release();
 	return result::OK;
 }
@@ -192,31 +200,40 @@ int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize) {
 int KinectProvider::getBodyCount(OUT int &bodyCount) {
 	UINT cap = 0;
 	BYTE *buf;
-	int res = getBodyMap(&buf, cap);
+	int res = getBodyMap(&buf, cap, true);
 	if (res != result::OK) return res;
 	set<BYTE> bodyNumbers;
 	for (int i = 0; i < cap; i++)
 		bodyNumbers.insert(buf[i]);
 	bodyCount = bodyNumbers.size();
+	delete[] buf;
 	return result::OK;
 }
 
-int KinectProvider::getDepthMap(OUT UINT16 **image, OUT UINT &arraySize) {
+int KinectProvider::getDepthMap(OUT UINT16 **image, OUT UINT &arraySize, bool copy) {
 	if (!depthFrameReader) throw error::DepthMapCaptureNotStarted;
 	IDepthFrame *IDF = nullptr;
 	int hr = depthFrameReader->AcquireLatestFrame(&IDF);
 	if (hr != 0) return result::NotReady;
 	IDF->AccessUnderlyingBuffer(&arraySize, image);
+	if (copy) {
+		*image = new UINT16[arraySize];
+		IDF->CopyFrameDataToArray(arraySize, *image);
+	}
 	IDF->Release();
 	return result::OK;
 }
 
-int KinectProvider::getBodyMap(OUT BYTE **map, OUT UINT &arraySize) {
+int KinectProvider::getBodyMap(OUT BYTE **map, OUT UINT &arraySize, bool copy) {
 	if (!bodyMapReader) throw error::BodyMapCaptureNotStarted;
 	IBodyIndexFrame *IBIF = nullptr;
 	int hr = bodyMapReader->AcquireLatestFrame(&IBIF);
 	if (hr != 0) return result::NotReady;
 	IBIF->AccessUnderlyingBuffer(&arraySize, map);
+	if (copy) {
+		*map = new BYTE[arraySize];
+		IBIF->CopyFrameDataToArray(arraySize, *map);
+	}
 	IBIF->Release();
 	return result::OK;
 }

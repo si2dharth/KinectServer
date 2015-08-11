@@ -1,3 +1,4 @@
+#pragma once
 #include "stdafx.h"
 
 class KinectProvider {
@@ -29,12 +30,12 @@ public:
 	void startAudioCapture();
 	void stopAudioCapture();
 
-	int getImage(OUT BYTE **image, OUT UINT &arraySize);
-	int getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize);
+	int getImage(OUT BYTE **image, OUT UINT &arraySize, bool copy = false);
+	int getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize, bool copy = false);
 	int getBodyCount(OUT int &bodyCount);
 	int getBodyData(OUT IBody **bodies);
-	int getDepthMap(OUT UINT16 **image, OUT UINT &arraySize);
-	int getBodyMap(OUT BYTE **map, OUT UINT &arraySize);
+	int getDepthMap(OUT UINT16 **image, OUT UINT &arraySize, bool copy = false);
+	int getBodyMap(OUT BYTE **map, OUT UINT &arraySize, bool copy = false);
 	int getAudioData(int index, OUT IStream *stream);
 
 	void processAudioData();

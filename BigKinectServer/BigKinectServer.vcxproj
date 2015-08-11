@@ -70,6 +70,8 @@
   <ItemGroup>
     <ClInclude Include="BodyFrameProvider.h" />
     <ClInclude Include="KinectProvider.h" />
+    <ClInclude Include="KinectThread.h" />
+    <ClInclude Include="Server.h" />
     <ClInclude Include="ServerThread.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TCP.h" />
@@ -77,7 +79,9 @@
   <ItemGroup>
     <ClCompile Include="BodyFrameProvider.cpp" />
     <ClCompile Include="KinectProvider.cpp" />
+    <ClCompile Include="KinectThread.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Server.cpp" />
     <ClCompile Include="TCP.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

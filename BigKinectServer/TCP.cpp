@@ -8,6 +8,10 @@ int Client::send(string s) {
 	return ::send(ClientSocket, s.c_str(), s.length(), 0);
 }
 
+int Client::send(char *c, int length) {
+	return ::send(ClientSocket, c, length, 0);
+}
+
 int Client::receive(string &s) {
 	char recvbuf[2000];
 	int iRes = recv(ClientSocket, recvbuf, 2000, 0);
@@ -26,7 +30,7 @@ void Client::close() {
 DWORD __stdcall FunctionCallThread(LPVOID lParam) {
 	pair<Client*, ClientCallBackFunc>* ClientFunction = (pair<Client*, ClientCallBackFunc>*)lParam;
 	ClientFunction->second(ClientFunction->first);
-	delete ClientFunction->first;
+	//delete ClientFunction->first; For this program, the client is needed later.
 	delete ClientFunction;
 	return 0;
 }
