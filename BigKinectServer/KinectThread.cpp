@@ -37,7 +37,7 @@ void KinectThread::sendToClient() {
 	for (auto C : connectedClients) {
 		C->send(to_string(length) + "\n"s);
 		int i = C->send(c, length);
-		if (i == -1) 
+		if (i == -1)
 			removeList.push_back(C);
 	}
 	auto I = connectedClients.begin();
@@ -102,6 +102,7 @@ void ImageThread::calculateDecayTime() {
 
 
 
+
 ColorImageThread::ColorImageThread() : ImageThread() {
 	_kinect->startColorCapture();
 }
@@ -110,11 +111,50 @@ ColorImageThread::~ColorImageThread() {
 	_kinect->stopColorCapture();
 }
 
+BYTE clip(int i) {
+	if (i < 0) return 0;
+	if (i > 255) return 255;
+	return i;
+}
+
+void convertToRGB(BYTE Y, BYTE U, BYTE V, BYTE &R, BYTE &G, BYTE &B) {
+	int C, D, E;
+	C = Y - 16;
+	D = U - 128;
+	E = V - 128;
+
+	R = clip((C * 298 + 409 * E + 128) >> 8);
+	G = clip((C * 298 - 100 * D - 208 * E + 128) >> 8);
+	B = clip((C * 298 + 516 * D + 128) >> 8);
+}
+
 void *ColorImageThread::collectImage(UINT &cap) {
 	BYTE *image = nullptr;
 	while (_kinect->getImage(&image, cap, true) != _kinect->OK);
-	cap *= sizeof(BYTE);
-	return image;
+	BYTE *imageRGB = new BYTE[cap * 2];
+	for (int i = 0; i < cap; i += 4) {
+		BYTE R, G, B;
+		BYTE Y, U, V;
+		Y = image[i];
+		U = image[i + 1];
+		V = image[i + 3];
+		convertToRGB(Y, U, V, R, G, B);
+		int iR = i << 1;
+		imageRGB[iR] = B;
+		imageRGB[iR + 1] = G;
+		imageRGB[iR + 2] = R;
+		imageRGB[iR + 3] = 255;
+
+		Y = image[i + 2];
+		iR += 4;
+		convertToRGB(Y, U, V, R, G, B);
+		imageRGB[iR] = B;
+		imageRGB[iR + 1] = G;
+		imageRGB[iR + 2] = R;
+		imageRGB[iR + 3] = 255;
+	}
+	cap *= sizeof(BYTE)*2;
+	return imageRGB;
 }
 
 
@@ -128,7 +168,7 @@ InfraredImageThread::~InfraredImageThread() {
 
 void *InfraredImageThread::collectImage(UINT &cap) {
 	UINT16 *image = nullptr;
-	while (_kinect->getInfraredImage(&image, cap,true) != _kinect->OK);
+	while (_kinect->getInfraredImage(&image, cap, true) != _kinect->OK);
 	cap *= sizeof(UINT16);
 	return image;
 }
