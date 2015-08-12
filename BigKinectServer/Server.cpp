@@ -16,7 +16,24 @@ void ColorImageServer(Client *C) {
 		DWORD tID;
 		CreateThread(0, 0, startThread, CIT, 0, &tID);
 	}
-	CIT->connectClient(C);
+	while (true) {
+		string s;
+		C->receive(s);
+		if (s == "get") 
+		{
+			void *img = nullptr;
+			UINT capacity = 0;
+			while (capacity == 0 || img == nullptr)
+				CIT->getImage(1, &img, capacity);
+			int i = 0;
+			i = C->send(to_string(capacity) + "\n"s);
+			i = C->send((char*)img, capacity);
+			delete[] img;
+			img = 0;
+			if (i < 0) break;
+		}
+		else if (s == "disconnect") break;
+	}
 }
 
 void InfraredImageServer(Client *C) {

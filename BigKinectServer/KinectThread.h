@@ -25,12 +25,13 @@ class ImageThread : public KinectThread {
 	UINT capacity = 0;
 	void calculateDecayTime();
 protected:
+	bool lock = false;
 	virtual void* collectImage(UINT &cap) = 0;
 public:
 	ImageThread();
 	~ImageThread();
 	virtual void run();
-	virtual void getImage(int time, void *image, UINT &capacity);
+	virtual void getImage(int time, void **image, UINT &capacity);
 	virtual void getDataToSend(char **c, int &length);
 	virtual void setDecay(unsigned newTime);
 	virtual void removeDecay(unsigned time);
