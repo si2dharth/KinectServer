@@ -30,7 +30,7 @@ void Client::close() {
 DWORD __stdcall FunctionCallThread(LPVOID lParam) {
 	pair<Client*, ClientCallBackFunc>* ClientFunction = (pair<Client*, ClientCallBackFunc>*)lParam;
 	ClientFunction->second(ClientFunction->first);
-	//delete ClientFunction->first; For this program, the client is needed later.
+	delete ClientFunction->first; //For this program, the client is needed later.
 	delete ClientFunction;
 	return 0;
 }

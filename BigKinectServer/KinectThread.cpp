@@ -1,4 +1,7 @@
 #include "KinectThread.h"
+#include <gdiplus.h>
+#pragma comment(lib,"gdiplus.lib")
+
 
 KinectProvider *_kinect = nullptr;
 
@@ -33,66 +36,28 @@ void KinectThread::sendToClient() {
 }
 
 ImageThread::ImageThread() : KinectThread() {
-	setDecay(10);
 }
 
 ImageThread::~ImageThread() {}
 
 void ImageThread::run() {
-	if (decayTime == 0) return;
-	while (lock);
-	lock = true;
-	if (images.size() == decayTime) {
-		auto image = images.front();
-		images.pop_front();
-		delete[] image;
-	}
 	void* img = collectImage(capacity);
-	images.push_back(img);
-	lock = false;
+	lck.lock();
+	if (image) delete[] image;
+	image = img;
+	lck.unlock();
 }
 
-void ImageThread::getDataToSend(char **c, int &length) {
-	length = capacity;
-	if (images.size() == 0) return;
-	*c = new char[capacity];
-	memcpy(*c, images.back(), capacity);
-}
-
-//Time goes in reverse
-void ImageThread::getImage(int time, void **image, UINT &cap) {
-	while (lock);
-	lock = true;
+void ImageThread::getImage(void **image, UINT &cap) {
 	cap = capacity;
-	time = images.size() - time;
-	if (time < 0) time = 0;
-	if (images.size() == 0) {
-		lock = false;
+	if (this->image == 0) {
 		return;
 	}
-	auto I = images.begin();
-	while (time-- > 0) I++;
-	
-	*image = new char[cap];
-	memcpy(*image, *I, capacity);
-	lock = false;
+	lck.lock();
+	*image = new BYTE[cap];
+	memcpy(*image, this->image, cap);
+	lck.unlock();
 }
-
-void ImageThread::setDecay(unsigned newTime) {
-	times.insert(newTime);
-	calculateDecayTime();
-}
-
-void ImageThread::removeDecay(unsigned time) {
-	times.erase(time);
-	calculateDecayTime();
-}
-
-void ImageThread::calculateDecayTime() {
-	if (times.size() == 0) decayTime = 0; else decayTime = *times.rbegin();
-}
-
-
 
 
 ColorImageThread::ColorImageThread() : ImageThread() {
@@ -109,45 +74,135 @@ BYTE clip(int i) {
 	return i;
 }
 
-void convertToRGB(BYTE Y, BYTE U, BYTE V, BYTE &R, BYTE &G, BYTE &B) {
-	int C, D, E;
-	C = Y - 16;
-	D = U - 128;
-	E = V - 128;
+int *YUV2RGB;
 
-	R = clip((C * 298 + 409 * E + 128) >> 8);
-	G = clip((C * 298 - 100 * D - 208 * E + 128) >> 8);
-	B = clip((C * 298 + 516 * D + 128) >> 8);
+void calConv() {
+	YUV2RGB = new int[256 * 256 * 256];
+	for (int Y = 0; Y < 255; Y++) {
+		for (int U = 0; U < 255; U++) {
+			for (int V = 0; V < 255; V++) {
+				int C, D, E;
+				C = Y - 16;
+				D = U - 128;
+				E = V - 128;
+				BYTE R, G, B;
+				B = clip((C * 298 + 409 * E + 128) >> 8);
+				G = clip((C * 298 - 100 * D - 208 * E + 128) >> 8);
+				R = clip((C * 298 + 516 * D + 128) >> 8);
+				YUV2RGB[(Y << 16) + (U << 8) + V] = (B << 16) + (G << 8) + R;
+			}
+		}
+	}
+	OutputDebugString("Done");
 }
 
-void *ColorImageThread::collectImage(UINT &cap) {
-	BYTE *image = nullptr;
-	while (_kinect->getImage(&image, cap, true) != _kinect->OK);
-	BYTE *imageRGB = new BYTE[cap * 2];
-	for (int i = 0; i < cap; i += 4) {
-		BYTE R, G, B;
-		BYTE Y, U, V;
-		Y = image[i];
-		U = image[i + 1];
-		V = image[i + 3];
-		convertToRGB(Y, U, V, R, G, B);
-		int iR = i << 1;
-		imageRGB[iR] = B;
-		imageRGB[iR + 1] = G;
-		imageRGB[iR + 2] = R;
-		imageRGB[iR + 3] = 255;
+inline void convertToRGB(BYTE* YUV, BYTE* RGB) {
+	BYTE Y = YUV[0], U = YUV[1], V = YUV[3];
+	int yuv = (Y << 16) + (U << 8) + (V);
+	int rgb = YUV2RGB[yuv];
+	RGB[2] = rgb >> 16;
+	RGB[1] = (rgb & 0xFF00) >> 8;
+	RGB[0] = rgb & 0xFF;
 
-		Y = image[i + 2];
-		iR += 4;
-		convertToRGB(Y, U, V, R, G, B);
-		imageRGB[iR] = B;
-		imageRGB[iR + 1] = G;
-		imageRGB[iR + 2] = R;
-		imageRGB[iR + 3] = 255;
+	Y = YUV[2];
+	yuv = (Y << 16) + (U << 8) + V;
+	rgb = YUV2RGB[yuv];
+
+	RGB[5] = rgb >> 16;
+	RGB[4] = (rgb & 0xFF00) >> 8;
+	RGB[3] = rgb & 0xFF;
+}
+
+using namespace Gdiplus;
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
+{
+	UINT  num = 0;          // number of image encoders
+	UINT  size = 0;         // size of the image encoder array in bytes
+
+	ImageCodecInfo* pImageCodecInfo = NULL;
+
+	Gdiplus::GetImageEncodersSize(&num, &size);
+	if (size == 0)
+		return -1;  // Failure
+
+	pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
+	if (pImageCodecInfo == NULL)
+		return -1;  // Failure
+
+	Gdiplus::GetImageEncoders(num, size, pImageCodecInfo);
+
+	for (UINT j = 0; j < num; ++j)
+	{
+		if (wcscmp(pImageCodecInfo[j].MimeType, format) == 0)
+		{
+			*pClsid = pImageCodecInfo[j].Clsid;
+			free(pImageCodecInfo);
+			return j;  // Success
+		}
 	}
-	cap *= sizeof(BYTE)*2;
+
+	free(pImageCodecInfo);
+	return -1;  // Failure
+}
+
+BYTE* convertToJPEG(BYTE* RGBArray, UINT &length) {
+	BITMAPINFO bmi;
+	memset(&bmi, 0, sizeof(bmi));
+	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bmi.bmiHeader.biWidth = 1920;
+	bmi.bmiHeader.biHeight = -1080;
+	bmi.bmiHeader.biPlanes = 1;
+	bmi.bmiHeader.biCompression = BI_RGB;
+	bmi.bmiHeader.biBitCount = 24;
+
+	// Write pixels to 'data' however you want...
+	Gdiplus::Bitmap* myImage = new Gdiplus::Bitmap(&bmi, RGBArray);
+	IStream *jpgStream;
+	CLSID jpgClsid;
+	GetEncoderClsid(L"image/jpeg", &jpgClsid);
+	CreateStreamOnHGlobal(NULL, TRUE, &jpgStream);
+	myImage->Save(jpgStream, &jpgClsid);
+	STATSTG stats;
+	jpgStream->Stat(&stats, STATFLAG_NONAME);
+	BYTE *jpg = new BYTE[stats.cbSize.QuadPart];
+	ULONG read;
+	LARGE_INTEGER lg;
+	lg.QuadPart = 0;
+	jpgStream->Seek(lg, STREAM_SEEK_SET, NULL);
+	jpgStream->Read(jpg, stats.cbSize.QuadPart, &read);
+	jpgStream->Release();
+	length = stats.cbSize.QuadPart;
+	return jpg;
+
+}
+
+#include <ctime>
+void *ColorImageThread::collectImage(UINT &cap) {
+	unsigned start = clock();
+	BYTE *image = nullptr;
+	UINT capacity;
+	while (_kinect->getImage(&image, capacity, true) != _kinect->OK);
+	string s = to_string(clock() - start) + " , "s;
+	OutputDebugString(s.c_str());
+
+	start = clock();
+	BYTE *imageRGB = new BYTE[capacity * 3 / 2];
+	UINT iR = 0;
+	for (int i = 0; i < capacity; i += 4, iR += 6) {
+		convertToRGB(&image[i], &imageRGB[iR]);
+	}
+	capacity *= sizeof(BYTE) * 3 / 2;
 	delete[] image;
-	return imageRGB;
+	s = to_string(clock() - start) + " , "s;
+	OutputDebugString(s.c_str());
+	
+	start = clock();
+	BYTE *JPG = convertToJPEG(imageRGB, capacity);
+	delete[] imageRGB;
+	s = to_string(clock() - start) + "\n"s;
+	OutputDebugString(s.c_str());
+	cap = capacity;
+	return JPG;
 }
 
 
@@ -161,8 +216,10 @@ InfraredImageThread::~InfraredImageThread() {
 
 void *InfraredImageThread::collectImage(UINT &cap) {
 	UINT16 *image = nullptr;
-	while (_kinect->getInfraredImage(&image, cap, true) != _kinect->OK);
-	cap *= sizeof(UINT16);
+	UINT lCap;
+	while (_kinect->getInfraredImage(&image, lCap, true) != _kinect->OK);
+	lCap *= sizeof(UINT16);
+	cap = lCap;
 	return image;
 }
 
@@ -176,8 +233,10 @@ DepthMapThread::~DepthMapThread() {
 
 void *DepthMapThread::collectImage(UINT &cap) {
 	UINT16 *image = nullptr;
-	while (_kinect->getDepthMap(&image, cap) != _kinect->OK);
-	cap *= sizeof(UINT16);
+	UINT lCap;
+	while (_kinect->getDepthMap(&image, lCap, true) != _kinect->OK);
+	lCap *= sizeof(UINT16);
+	cap = lCap;
 	return image;
 }
 
@@ -191,7 +250,9 @@ BodyMapThread::~BodyMapThread() {
 
 void *BodyMapThread::collectImage(UINT &cap) {
 	BYTE *image = nullptr;
-	while (_kinect->getBodyMap(&image, cap) != _kinect->OK);
-	cap *= sizeof(BYTE);
+	UINT lCap;
+	while (_kinect->getBodyMap(&image, lCap, true) != _kinect->OK);
+	lCap *= sizeof(BYTE);
+	cap = lCap;
 	return image;
 }

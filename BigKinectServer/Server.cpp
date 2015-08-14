@@ -24,7 +24,7 @@ void ColorImageServer(Client *C) {
 			void *img = nullptr;
 			UINT capacity = 0;
 			while (capacity == 0 || img == nullptr)
-				CIT->getImage(1, &img, capacity);
+				CIT->getImage(&img, capacity);
 			int i = 0;
 			i = C->send(to_string(capacity) + "\n"s);
 			i = C->send((char*)img, capacity);
@@ -42,7 +42,24 @@ void InfraredImageServer(Client *C) {
 		DWORD tID;
 		CreateThread(0, 0, startThread, IIT, 0, &tID);
 	}
-	IIT->connectClient(C);
+	while (true) {
+		string s;
+		C->receive(s);
+		if (s == "get")
+		{
+			void *img = nullptr;
+			UINT capacity = 0;
+			while (capacity == 0 || img == nullptr)
+				IIT->getImage(&img, capacity);
+			int i = 0;
+			i = C->send(to_string(capacity) + "\n"s);
+			i = C->send((char*)img, capacity);
+			delete[] img;
+			img = 0;
+			if (i < 0) break;
+		}
+		else if (s == "disconnect") break;
+	}
 }
 
 void DepthMapServer(Client *C) {
@@ -51,7 +68,24 @@ void DepthMapServer(Client *C) {
 		DWORD tID;
 		CreateThread(0, 0, startThread, DMT, 0, &tID);
 	}
-	DMT->connectClient(C);
+	while (true) {
+		string s;
+		C->receive(s);
+		if (s == "get")
+		{
+			void *img = nullptr;
+			UINT capacity = 0;
+			while (capacity == 0 || img == nullptr)
+				DMT->getImage(&img, capacity);
+			int i = 0;
+			i = C->send(to_string(capacity) + "\n"s);
+			i = C->send((char*)img, capacity);
+			delete[] img;
+			img = 0;
+			if (i < 0) break;
+		}
+		else if (s == "disconnect") break;
+	}
 }
 
 void BodyMapServer(Client *C) {
@@ -60,5 +94,22 @@ void BodyMapServer(Client *C) {
 		DWORD tID;
 		CreateThread(0, 0, startThread, BMT, 0, &tID);
 	}
-	BMT->connectClient(C);
+	while (true) {
+		string s;
+		C->receive(s);
+		if (s == "get")
+		{
+			void *img = nullptr;
+			UINT capacity = 0;
+			while (capacity == 0 || img == nullptr)
+				BMT->getImage(&img, capacity);
+			int i = 0;
+			i = C->send(to_string(capacity) + "\n"s);
+			i = C->send((char*)img, capacity);
+			delete[] img;
+			img = 0;
+			if (i < 0) break;
+		}
+		else if (s == "disconnect") break;
+	}
 }

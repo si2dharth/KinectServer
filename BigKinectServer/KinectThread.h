@@ -3,9 +3,12 @@
 #include "TCP.h"
 #include <list>
 #include <set>
+#include <mutex>
 using namespace std;
 
 void setKinectProvider(KinectProvider* KP);
+
+void calConv();
 
 class KinectThread {
 	list<Client*> connectedClients;
@@ -13,28 +16,21 @@ public:
 	KinectThread();
 	~KinectThread();
 	virtual void run() = 0;
-	virtual void getDataToSend(char **c, int &length) = 0;
 	void sendToClient();
 	void connectClient(Client* C);
 };
 
 class ImageThread : public KinectThread {
-	unsigned decayTime = 0;
-	list<void*> images;
-	multiset<int> times;
+	void *image = 0;
 	UINT capacity = 0;
-	void calculateDecayTime();
 protected:
-	bool lock = false;
+	mutex lck;
 	virtual void* collectImage(UINT &cap) = 0;
 public:
 	ImageThread();
 	~ImageThread();
 	virtual void run();
-	virtual void getImage(int time, void **image, UINT &capacity);
-	virtual void getDataToSend(char **c, int &length);
-	virtual void setDecay(unsigned newTime);
-	virtual void removeDecay(unsigned time);
+	virtual void getImage(void **image, UINT &capacity);
 };
 
 class ColorImageThread : public ImageThread {

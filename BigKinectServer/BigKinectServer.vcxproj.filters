@@ -24,9 +24,6 @@
     <ClInclude Include="TCP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ServerThread.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="BodyFrameProvider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
