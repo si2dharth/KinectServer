@@ -21,6 +21,10 @@ class KinectProvider {
 
 public:
 	///The constructor. Finds a connected Kinect and starts interface with it.
+	/**
+	Exception KinectProvider::error.SensorNotFound is thrown if Kinect Sensor is not connected.
+	Exception KinectProvider::error.SensorNotReady is thrown if Kinect Sensor if the program was unable to connect to the sensor.
+	*/
 	KinectProvider();								
 
 	///Disconnects from the kinect
@@ -83,7 +87,7 @@ public:
 
 	@param [out] image The image is returned in this UINT16 array. The pointer to the array is to be passed.
 	@param [out] arraySize The parameter will hold the size of the array if the image was captured without errors.
-	@param [in] copy If true, the image is copied to the BYTE array from the Kinect sensor. If false, a direct access to Kinect sensor's buffer is returned. The Kinect's buffer becomes invalid as soon as a new frame is captured.
+	@param [in] copy If true, the image is copied to the UINT16 array from the Kinect sensor. If false, a direct access to Kinect sensor's buffer is returned. The Kinect's buffer becomes invalid as soon as a new frame is captured.
 	*/
 	int getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize, bool copy = false);
 
@@ -105,8 +109,30 @@ public:
 	*/
 	int getBodyData(OUT IBody **bodies);
 
+	///Get depth map in terms of depth values
+	/**
+	Gets the current depth map frame from the Kinect sensor. startDepthMapCapture() should have been called before this method is called otherwise exception KinectProvider::error.DepthMapCaptureNotStarted will be thrown.
+	It is possible that the sensor does not have a new frame after the last frame was collected. In this case, KinectProvider::result.NotReady will be returned.
+	If the image is captured properly, KinectProvider::result.OK will be returned.
+	The image returned is an array of UINT16 values. Each value contains the depth value for the specific pixel.
 
+	@param [out] image The image is returned in this UINT16 array. The pointer to the array is to be passed.
+	@param [out] arraySize The parameter will hold the size of the array if the image was captured without errors.
+	@param [in] copy If true, the map is copied to the UINT16 array from the Kinect sensor. If false, a direct access to Kinect sensor's buffer is returned. The Kinect's buffer becomes invalid as soon as a new frame is captured.
+	*/
 	int getDepthMap(OUT UINT16 **image, OUT UINT &arraySize, bool copy = false);
+
+	///Get body index map in terms of body indices
+	/**
+	Gets the current body index map frame from the Kinect sensor. startBodyMapCapture() should have been called before this method is called otherwise exception KinectProvider::error.BodyMapCaptureNotStarted will be thrown.
+	It is possible that the sensor does not have a new frame after the last frame was collected. In this case, KinectProvider::result.NotReady will be returned.
+	If the image is captured properly, KinectProvider::result.OK will be returned.
+	The image returned is an array of UINT16 values. Each value contains the body index for the specific pixel.
+
+	@param [out] image The image is returned in this BYTE array. The pointer to the array is to be passed.
+	@param [out] arraySize The parameter will hold the size of the array if the map was captured without errors.
+	@param [in] copy If true, the map is copied to the BYTE array from the Kinect sensor. If false, a direct access to Kinect sensor's buffer is returned. The Kinect's buffer becomes invalid as soon as a new frame is captured.
+	*/
 	int getBodyMap(OUT BYTE **map, OUT UINT &arraySize, bool copy = false);
 	
 	///Not implemented

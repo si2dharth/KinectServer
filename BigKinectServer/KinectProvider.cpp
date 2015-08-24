@@ -2,7 +2,7 @@
 #include <set>
 using namespace std;
 
-KinectProvider::KinectProvider() :
+KinectProvider::KinectProvider() :		//Initialize all to nullptr
 	sensor(nullptr),
 	audioBeamReader(nullptr),
 	colorFrameReader(nullptr),
@@ -11,19 +11,20 @@ KinectProvider::KinectProvider() :
 	depthFrameReader(nullptr),
 	infraredFrameReader(nullptr)
 {
-	int hr = GetDefaultKinectSensor(&sensor);
-	if (hr != 0) {
+	int hr = GetDefaultKinectSensor(&sensor);	//Get the default caonnected sensor in case of more than one sensor
+	if (hr != 0) {								//Failed, meaning sensor was not found
 		sensor = nullptr;
 		throw error::SensorNotFound;
 	}
 	hr = sensor->Open();
-	if (hr != 0) {
+	if (hr != 0) {								//Failed, meaning sensor couldn't be connected.
 		sensor->Release();
 		throw error::SensorNotReady;
 	}
 }
 
 KinectProvider::~KinectProvider() {
+	//Release everything
 	if (audioBeamReader) audioBeamReader->Release();
 	if (colorFrameReader) colorFrameReader->Release();
 	if (bodyFrameReader) bodyFrameReader->Release();
@@ -37,16 +38,18 @@ KinectProvider::~KinectProvider() {
 void KinectProvider::startColorCapture() {
 	///If reader is open, don't do anything
 	if (!colorFrameReader) {
+														//Standard method: Get the source, get reader from source
 		IColorFrameSource *ICS = nullptr;
 		int hr = sensor->get_ColorFrameSource(&ICS);
 		if (hr != 0) throw error::ColorSourceNotReady;
 		hr = ICS->OpenReader(&colorFrameReader);
+		ICS->Release();									//Don't need the source anymore
 		if (hr != 0) {
-			colorFrameReader = nullptr;
+			colorFrameReader = nullptr;					//Make sure its not set to an arbitrary value in case of failure
 			throw error::CouldNotOpenColorReader;
 		}
 	}
-	imageUsers++;
+	imageUsers++;										//Count the number of users for the reader.
 }
 
 void KinectProvider::stopColorCapture() {
@@ -57,18 +60,20 @@ void KinectProvider::stopColorCapture() {
 	}
 }
 
-void KinectProvider::startInfraredCapture() {
+void KinectProvider::startInfraredCapture() {							
 	if (!infraredFrameReader) {
+		//Standard method: Get the source, get reader from source		
 		IInfraredFrameSource *IFS = nullptr;
 		int hr = sensor->get_InfraredFrameSource(&IFS);
 		if (hr != 0) throw error::InfraredSourceNotReady;
 		hr = IFS->OpenReader(&infraredFrameReader);
+		IFS->Release();										//Don't need the source anymore
 		if (hr != 0) {
-			infraredFrameReader = nullptr;
+			infraredFrameReader = nullptr;					//Make sure its not set to an arbitrary value in case of failure
 			throw error::CouldNotOpenInfraredReader;
 		}
 	}
-	infraredUsers++;
+	infraredUsers++;										//Count the number of users for the reader.
 }
 
 void KinectProvider::stopInfraredCapture() {
@@ -80,17 +85,18 @@ void KinectProvider::stopInfraredCapture() {
 
 void KinectProvider::startBodyDataCapture() {
 	if (!bodyFrameReader) {
+		//Standard method: Get the source, get reader from source
 		IBodyFrameSource *IBS = nullptr;
 		int hr = sensor->get_BodyFrameSource(&IBS);
 		if (hr != 0) throw error::BodyDataSourceNotReady;
 		hr = IBS->OpenReader(&bodyFrameReader);
-		IBS->Release();
+		IBS->Release();										   //Don't need the source anymore
 		if (hr != 0) {
-			bodyFrameReader = nullptr;
+			bodyFrameReader = nullptr;						   //Make sure its not set to an arbitrary value in case of failure
 			throw error::CouldNotOpenBodyDataReader;
 		}
 	}
-	bodyUsers++;
+	bodyUsers++;											   //Count the number of users for the reader.
 }
 
 void KinectProvider::stopBodyDataCapture() {
@@ -102,17 +108,18 @@ void KinectProvider::stopBodyDataCapture() {
 
 void KinectProvider::startDepthMapCapture() {
 	if (!depthFrameReader) {
+		//Standard method: Get the source, get reader from source
 		IDepthFrameSource *IDS = nullptr;
 		int hr = sensor->get_DepthFrameSource(&IDS);
 		if (hr != 0) throw error::DepthMapSourceNotReady;
 		hr = IDS->OpenReader(&depthFrameReader);
-		IDS->Release();
+		IDS->Release();										 //Don't need the source anymore
 		if (hr != 0) {
-			depthFrameReader = nullptr;
+			depthFrameReader = nullptr;						 //Make sure its not set to an arbitrary value in case of failure
 			throw error::CouldNotOpenDepthMapReader;
 		}
 	}
-	depthUsers++;
+	depthUsers++;											 //Count the number of users for the reader.
 }
 
 void KinectProvider::stopDepthMapCapture() {
@@ -124,17 +131,18 @@ void KinectProvider::stopDepthMapCapture() {
 
 void KinectProvider::startBodyMapCapture() {
 	if (!bodyMapReader) {
+		//Standard method: Get the source, get reader from source
 		IBodyIndexFrameSource *IBIS = nullptr;
 		int hr = sensor->get_BodyIndexFrameSource(&IBIS);
 		if (hr != 0) throw error::BodyMapSourceNotReady;
 		hr = IBIS->OpenReader(&bodyMapReader);
-		IBIS->Release();
+		IBIS->Release();									//Don't need the source anymore
 		if (hr != 0) {
-			bodyMapReader = nullptr;
+			bodyMapReader = nullptr;						//Make sure its not set to an arbitrary value in case of failure
 			throw error::CouldNotOpenBodyMapReader;
 		}
 	}
-	bodyMapUsers++;
+	bodyMapUsers++;											//Count the number of users for the reader.
 }
 
 void KinectProvider::stopBodyMapCapture() {
@@ -146,17 +154,18 @@ void KinectProvider::stopBodyMapCapture() {
 
 void KinectProvider::startAudioCapture() {
 	if (!audioBeamReader) {
+		//Standard method: Get the source, get reader from source
 		IAudioSource *IAS = nullptr;
 		int hr = sensor->get_AudioSource(&IAS);
 		if (hr != 0) throw error::AudioSourceNotReady;
 		hr = IAS->OpenReader(&audioBeamReader);
-		IAS->Release();
+		IAS->Release();										   //Don't need the source anymore
 		if (hr != 0) {
-			audioBeamReader = nullptr;
+			audioBeamReader = nullptr;						   //Make sure its not set to an arbitrary value in case of failure
 			throw error::CouldNotOpenAudioReader;
 		}
 	}
-	audioUsers++;
+	audioUsers++;											   //Count the number of users for the reader.
 }
 
 void KinectProvider::stopAudioCapture() {
@@ -169,27 +178,27 @@ void KinectProvider::stopAudioCapture() {
 
 
 int KinectProvider::getImage(OUT BYTE **image, OUT UINT &arraySize, bool copy) {
-	if (!colorFrameReader) throw error::ColorCaptureNotStarted;
+	if (!colorFrameReader) throw error::ColorCaptureNotStarted;			//Make sure that capture was started
 	IColorFrame *ICF = nullptr;
 	int hr = colorFrameReader->AcquireLatestFrame(&ICF);
 	if (hr != 0) return result::NotReady;
-	ICF->AccessRawUnderlyingBuffer(&arraySize, image);
+	ICF->AccessRawUnderlyingBuffer(&arraySize, image);					//Access buffer regardless of copy parameter as arraySize is required
 	if (copy) {
-		*image = new BYTE[arraySize];
-		ICF->CopyRawFrameDataToArray(arraySize, *image);
+		*image = new BYTE[arraySize];									//Kinect does not manage array
+		ICF->CopyRawFrameDataToArray(arraySize, *image);				
 	}
 	ICF->Release();
 	return result::OK;
 }
 
 int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize, bool copy) {
-	if (!infraredFrameReader) throw error::InfraredCaptureNotStarted;
+	if (!infraredFrameReader) throw error::InfraredCaptureNotStarted;		//Make sure that capture was started
 	IInfraredFrame *IIF = nullptr;
 	int hr = infraredFrameReader->AcquireLatestFrame(&IIF);
 	if (hr != 0) return result::NotReady;
-	IIF->AccessUnderlyingBuffer(&arraySize, image);
+	IIF->AccessUnderlyingBuffer(&arraySize, image);							//Access buffer regardless of copy parameter as arraySize is required
 	if (copy) {
-		*image = new UINT16[arraySize];
+		*image = new UINT16[arraySize];										//Kinect does not manage array
 		IIF->CopyFrameDataToArray(arraySize, *image);
 	}
 	IIF->Release();
@@ -200,13 +209,13 @@ int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize, bo
 int KinectProvider::getBodyCount(OUT int &bodyCount) {
 	UINT cap = 0;
 	BYTE *buf;
-	int res = getBodyMap(&buf, cap, true);
-	if (res != result::OK) return res;
-	set<BYTE> bodyNumbers;
+	int res = getBodyMap(&buf, cap, true);									//Try to get the body index map
+	if (res != result::OK) return res;										//Make sure the body index was successfully retrieved
+	set<BYTE> bodyNumbers;													//Set makes sure that there is only one copy of each number ie, the numbers stored are all unique
 	for (int i = 0; i < cap; i++)
 		bodyNumbers.insert(buf[i]);
-	bodyCount = bodyNumbers.size();
-	delete[] buf;
+	bodyCount = bodyNumbers.size() - 1;										//The size of bodyNumber would be the number of unique numbers. Leave one for 0(background)
+	delete[] buf;															//Don't need the buffer anymore
 	return result::OK;
 }
 
