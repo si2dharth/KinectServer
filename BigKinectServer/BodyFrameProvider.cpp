@@ -1,6 +1,6 @@
 #include "BodyFrameProvider.h"
 
-BodyFrameProvider::BodyFrameProvider(KinectProvider *KP) {
+BodyFrameProvider::BodyFrameProvider(KinectProvider *KP){
 	_kinect = KP;
 	_kinect->startBodyDataCapture();
 }
@@ -10,15 +10,15 @@ BodyFrameProvider::~BodyFrameProvider() {
 }
 
 void BodyFrameProvider::updateFrame() {
-	while (_kinect->getBodyData(bodies) != KinectProvider::result::OK);
+	while (_kinect->getBodyData(trackState, joints,handStates) != KinectProvider::result::OK);
 }
 
 int BodyFrameProvider::getNumberOfBodies() {
+	if (joints == nullptr) return 0;
 	int res = 0;
 	for (int i = 0; i < BODY_COUNT; i++) {
-		BOOLEAN tracked = false;
-		if (bodies[i]->get_IsTracked(&tracked) == 0)
-			if (tracked) res++;
+		if (trackState[i])
+			 res++;
 	}
 	return res;
 }
@@ -26,14 +26,31 @@ int BodyFrameProvider::getNumberOfBodies() {
 set<int> BodyFrameProvider::getBodyIndices() {
 	set<int> res;
 	for (int i = 0; i < BODY_COUNT; i++) {
-		BOOLEAN tracked = false;
-		if (bodies[i]->get_IsTracked(&tracked) == 0)
-			if (tracked) res.insert(i);
+		if (trackState[i])
+			res.insert(i);
 	}
 	return res;
 }
 
 Joint BodyFrameProvider::getJoint(int bodyIndex, JointType jointType) {
-	if (lastJoint != bodyIndex) bodies[bodyIndex]->GetJoints(JointType_Count, joints);
-	return joints[jointType];
+	if (joints[bodyIndex] == 0) {
+		Joint J;
+		J.TrackingState = TrackingState_NotTracked;
+		return J;
+	}
+	return joints[bodyIndex][jointType];
+}
+
+bool BodyFrameProvider::getLeftHandClosed(int bodyIndex) {
+	HandState leftState = handStates[bodyIndex][0];
+	if (leftState == HandState_Open || leftState == HandState_Closed)
+		lastLeftState[bodyIndex] = leftState == HandState_Closed;
+	return lastLeftState[bodyIndex];
+}
+
+bool BodyFrameProvider::getRightHandClosed(int bodyIndex) {
+	HandState rightState = handStates[bodyIndex][1];
+	if (rightState == HandState_Open || rightState == HandState_Closed)
+		lastRightState[bodyIndex] = rightState == HandState_Closed;
+	return lastRightState[bodyIndex];
 }

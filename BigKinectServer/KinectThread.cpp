@@ -9,41 +9,53 @@ void setKinectProvider(KinectProvider* KP) {
 	_kinect = KP;
 }
 
-///A new thread procedure that simply calls the run method for a given KinectThread
-DWORD __stdcall startThread(void *kinectThread) {
-	KinectThread *kThread = (KinectThread*)kinectThread;
-	while (true) {
-		kThread->run();
-	}
-}
 
-KinectThread::KinectThread() {
+KinectThread::KinectThread() : stopThread(false), backgroundWorker(&KinectThread::runThread, this) {
 	if (!_kinect) throw "Kinect not set";
 }
 
-KinectThread::~KinectThread() {};
+KinectThread::~KinectThread() {
+	destroy();
+};
+
+void KinectThread::runThread() {
+	while (!stopThread) {
+		Sleep(3);
+		this->run();
+	}
+}
+
+void KinectThread::destroy() {
+	stopThread = true;
+	if (backgroundWorker.joinable()) 
+		backgroundWorker.join();
+}
 
 ImageThread::ImageThread() : KinectThread(),lck() {
 }
 
 ImageThread::~ImageThread() {
+	destroy();
 	if (image) delete[] image;
 }
 
 void ImageThread::run() {
-	void* img = collectImage(capacity);		//WARNING: capacity is changed here and its value is NOT locked.
+	UINT tmpCap;
+	
+	void* img = collectImage(tmpCap);
 	lck.lock();								//As image is to be replaced, make sure no one else can access it
+	capacity = tmpCap;
 	if (image) delete[] image;				//Delete the old image
 	image = img;							
 	lck.unlock();							//Replace done. Continue.
 }
 
 void ImageThread::getImage(void **image, UINT &cap) {
-	cap = capacity;
 	if (this->image == 0) {
 		return;
 	}
 	lck.lock();								//As the image is to be copied, make sure it is not deleted while copy is in progress.
+	cap = capacity;
 	*image = new BYTE[cap];
 	memcpy(*image, this->image, cap);
 	lck.unlock();
@@ -55,6 +67,7 @@ ColorImageThread::ColorImageThread() : ImageThread() {
 }
 
 ColorImageThread::~ColorImageThread() {
+	destroy();
 	_kinect->stopColorCapture();
 }
 
@@ -181,9 +194,8 @@ BYTE* convertToJPEG(BYTE* RGBArray, UINT &length) {
 }
 
 #include <ctime>
-void *ColorImageThread::collectImage(UINT &cap) {
+void *ColorImageThread::collectImage(UINT &capacity) {
 	BYTE *image = nullptr;
-	UINT capacity;															//Use a copy capacity variable so that the variable value is not disturbed in the calling function (It is a reference variable)
 	while (_kinect->getImage(&image, capacity, true) != _kinect->OK);		//Wait until a new image is received
 	BYTE *imageRGB = new BYTE[capacity * 3 / 2];							//RGB is 6/4 = 3/2 times bigger than YUV2 image
 	UINT iR = 0;
@@ -195,7 +207,6 @@ void *ColorImageThread::collectImage(UINT &cap) {
 	
 	BYTE *JPG = convertToJPEG(imageRGB, capacity);							//Convert the RGB image to JPEG
 	delete[] imageRGB;														//Now, imageRGB is also not needed. Only JPG is needed.
-	cap = capacity;															//Update the capacity now.
 	return JPG;
 }
 
@@ -205,15 +216,14 @@ InfraredImageThread::InfraredImageThread() : ImageThread() {
 }
 
 InfraredImageThread::~InfraredImageThread() {
+	destroy();
 	_kinect->stopInfraredCapture();
 }
 
 void *InfraredImageThread::collectImage(UINT &cap) {
 	UINT16 *image = nullptr;
-	UINT lCap;
-	while (_kinect->getInfraredImage(&image, lCap, true) != _kinect->OK);		//Wait till image is successfully obtained
-	lCap *= sizeof(UINT16);
-	cap = lCap;
+	while (_kinect->getInfraredImage(&image, cap, true) != _kinect->OK);		//Wait till image is successfully obtained
+	cap *= sizeof(UINT16);
 	return image;
 }
 
@@ -222,15 +232,14 @@ DepthMapThread::DepthMapThread() : ImageThread() {
 }
 
 DepthMapThread::~DepthMapThread() {
+	destroy();
 	_kinect->stopDepthMapCapture();
 }
 
 void *DepthMapThread::collectImage(UINT &cap) {
 	UINT16 *image = nullptr;
-	UINT lCap;
-	while (_kinect->getDepthMap(&image, lCap, true) != _kinect->OK);			//Wait till map is successfully obtained
-	lCap *= sizeof(UINT16);
-	cap = lCap;
+	while (_kinect->getDepthMap(&image, cap, true) != _kinect->OK);			//Wait till map is successfully obtained
+	cap *= sizeof(UINT16);
 	return image;
 }
 
@@ -239,14 +248,80 @@ BodyMapThread::BodyMapThread() : ImageThread() {
 }
 
 BodyMapThread::~BodyMapThread() {
+	destroy();
 	_kinect->stopBodyMapCapture();
 }
 
 void *BodyMapThread::collectImage(UINT &cap) {
 	BYTE *image = nullptr;
-	UINT lCap;
-	while (_kinect->getBodyMap(&image, lCap, true) != _kinect->OK);				//Wait till map is successfully obtained.
-	lCap *= sizeof(BYTE);
-	cap = lCap;
-	return image;
+	BYTE *compressedImage = nullptr;
+	while (_kinect->getBodyMap(&image, cap, true) != _kinect->OK);				//Wait till map is successfully obtained.
+	compressedImage = new BYTE[cap / 2];
+	cap *= sizeof(BYTE);
+	for (int i = 0; i < cap; i += 2) {
+		compressedImage[i >> 1] = (image[i] << 4) + image[i+1];
+	}
+	delete[]image;
+
+	cap /= 2;
+	return compressedImage;
+}
+
+BodyThread::BodyThread() : KinectThread(), bodyFP(_kinect) {};
+
+BodyThread::~BodyThread() {
+	destroy();
+}
+
+void BodyThread::run() {
+	//lck.lock();
+	bodyFP.updateFrame();
+	//lck.unlock();
+}
+
+int BodyThread::getJoint(Joint *J, int bodyNumber, JointType jointType) {
+	if (bodyNumber > getNumberOfBodies()) {
+		J->TrackingState = TrackingState_NotTracked;
+		return -1;
+	};
+	lck.lock();
+	set<int> bodies = bodyFP.getBodyIndices();
+	auto body = bodies.begin();
+	while (--bodyNumber > 0) {
+		if (next(body) == bodies.end())
+			break;
+		else 
+			body = next(body);
+	}
+
+	if (body != bodies.end())
+		*J = bodyFP.getJoint(*body, jointType);
+	else
+		J->TrackingState = TrackingState_NotTracked;
+	lck.unlock();
+	return -1;
+}
+
+int BodyThread::getHandState(bool *closed, int bodyNumber, int side) {
+	set<int> bodies = bodyFP.getBodyIndices();
+	auto body = bodies.begin();
+	while (--bodyNumber > 0) {
+		if (next(body) == bodies.end())
+			break;
+		else
+			body = next(body);
+	}
+
+	if (body != bodies.end())
+		if (side == 1)
+			*closed = bodyFP.getLeftHandClosed(*body);
+		else
+			*closed = bodyFP.getRightHandClosed(*body);
+	else
+		*closed = false;
+	return 0;
+}
+
+int BodyThread::getNumberOfBodies() {
+	return bodyFP.getNumberOfBodies();		///Threading problem waiting to happen!!
 }

@@ -5,9 +5,11 @@ using namespace std;
 
 class BodyFrameProvider {
 	KinectProvider *_kinect;
-	IBody *bodies[BODY_COUNT];
-	Joint joints[JointType_Count];
+	bool trackState[BODY_COUNT];
+	Joint joints[BODY_COUNT][JointType_Count];
+	HandState handStates[BODY_COUNT][2];
 	int lastJoint = BODY_COUNT;
+	bool lastLeftState[BODY_COUNT], lastRightState[BODY_COUNT];
 public:
 	BodyFrameProvider(KinectProvider *KP);
 	~BodyFrameProvider();
@@ -15,4 +17,6 @@ public:
 	int getNumberOfBodies();
 	set<int> getBodyIndices();
 	Joint getJoint(int bodyIndex, JointType jointType);
+	bool getLeftHandClosed(int bodyIndex);
+	bool getRightHandClosed(int bodyIndex);
 };

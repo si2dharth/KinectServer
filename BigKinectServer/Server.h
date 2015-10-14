@@ -17,3 +17,6 @@ void DepthMapServer(Client *C);
 
 ///Server function which serves a client that requires body index map. The function will be called on a new thread every time a client is connected.
 void BodyMapServer(Client *C);
+
+///
+void BodyServer(Client *C);

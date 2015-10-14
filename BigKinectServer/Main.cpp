@@ -3,11 +3,18 @@
 #include "BodyFrameProvider.h"
 #include "Server.h"
 #include "KinectThread.h"
+#include <vector>
+#include <iostream>
 
 #include <gdiplus.h>
 #pragma comment(lib,"gdiplus.lib")
 
-int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdLine, int nShowCmd) {
+void connectedEvent(Client *C) {
+	
+}
+
+//int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdLine, int nShowCmd) {
+int main(int nargs, char **args){
 	ULONG_PTR gplus;
 	calConv();
 	Gdiplus::GdiplusStartupInput gInp;
@@ -21,9 +28,12 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdL
 	MultiClientTCPServer infraredServer(10002, InfraredImageServer);
 	MultiClientTCPServer depthMapServer(10003, DepthMapServer);
 	MultiClientTCPServer bodyMapServer(10004, BodyMapServer);
-
+	MultiClientTCPServer jointMapServer(10005, BodyServer);
 	
 
-	while (true);
+	while (true) {
+		Sleep(10);
+		
+	}
 	Gdiplus::GdiplusShutdown(gplus);
 }

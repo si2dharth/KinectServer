@@ -1,10 +1,12 @@
 ///This file provides links between TCP and KinectProvider
 #pragma once
 #include "KinectProvider.h"
+#include "BodyFrameProvider.h"
 #include "TCP.h"
 #include <list>
 #include <set>
 #include <mutex>
+#include <atomic>
 using namespace std;
 
 ///Set the KinectProvider for the program
@@ -28,13 +30,20 @@ After creation, the method run should be called repeatedly forever. The run meth
 This method should run on its own thread so that other operations can be performed.
 */
 class KinectThread {
+	atomic<bool> stopThread;
+	thread backgroundWorker;
+protected:
+	void runThread();
+	static int numUsers;
 public:
 	///Constructor. Makes sure that setKinectProvider was called prior to creating the object otherwise throws an exception.
 	KinectThread();
 
-	///Destructor
-	~KinectThread();
+	//Stop thread before deleting anything
+	void destroy();
 
+	///Destructor
+	virtual ~KinectThread();
 	///Abstract run method. The method is meant to collect and store data.
 	virtual void run() = 0;
 };
@@ -62,7 +71,7 @@ public:
 	ImageThread();	
 
 	///Destructor. Destroys the saved image.
-	~ImageThread();	
+	virtual ~ImageThread();	
 
 	///Run method collects and saves images. The method is supposed to be called repeatedly on a separate thread.
 	virtual void run();										
@@ -124,7 +133,14 @@ public:
 };
 
 class BodyThread : public KinectThread {
+	BodyFrameProvider bodyFP;
+	mutex lck;
+public:
+	BodyThread();
+	~BodyThread();
+	virtual void run();
 
+	int getJoint(Joint *J, int bodyNumber, JointType jointType);
+	int getHandState(bool *closed, int bodyNumber, int side);
+	int getNumberOfBodies();
 };
-
-DWORD __stdcall startThread(void *kinectThread);

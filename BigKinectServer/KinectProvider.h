@@ -107,7 +107,7 @@ public:
 	The method returns KinectProvider::result.OK if the frame was successfully captured otherwise KinectProvider::result.NotReady is returned
 	@param [out] bodies A pointer to an array of IBody. The array of IBody is returned in this
 	*/
-	int getBodyData(OUT IBody **bodies);
+	int getBodyData(OUT bool trackState[], OUT Joint joints[][JointType_Count], OUT HandState handStates[][2]);
 
 	///Get depth map in terms of depth values
 	/**

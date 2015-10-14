@@ -3,7 +3,10 @@
 ///{Same as typedef} ClientCallBallFunc is type: a function pointer that takes a pointer to a Client and returns nothing
 using ClientCallBackFunc = void(*)(Client*);
 
-Client::Client(SOCKET socket) : ClientSocket(socket) {}			//Simply initialize the ClientSocket to the socket value specified
+Client::Client(SOCKET socket) : ClientSocket(socket) {				//Simply initialize the ClientSocket to the socket value specified
+	BOOL noDelay = true;
+	setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char*)&noDelay, sizeof(BOOL));
+}
 
 int Client::send(string s) {
 	return ::send(ClientSocket, s.c_str(), s.length(), 0);			//The global send function defined in WinSock2 requires string as array of characters and the length of the string
@@ -39,7 +42,7 @@ DWORD __stdcall FunctionCallThread(LPVOID lParam) {
 
 ///Accepts connections on specified socket and for every connection accepted, calls the ClientCallBackFunc, passed to it, on a new thread
 /**
-	@param lParam A pointer to a pair of SOCKET and ClientCallBackFunc having values of an open listening socket and a function pointer to the function to be called for every accepted connection.
+@param lParam A pointer to a pair of SOCKET and ClientCallBackFunc having values of an open listening socket and a function pointer to the function to be called for every accepted connection.
 */
 DWORD __stdcall AcceptConnections(LPVOID lParam) {
 	pair<SOCKET, ClientCallBackFunc> *socketFunction = (pair<SOCKET, ClientCallBackFunc>*)lParam;		//Cast from void* to pair*
@@ -51,7 +54,7 @@ DWORD __stdcall AcceptConnections(LPVOID lParam) {
 		cf->second = socketFunction->second;
 		DWORD thread;
 		CreateThread(0, 0, FunctionCallThread, cf, 0, &thread);											//Start a new thread for the same
-		//It was possible to CreateThread using socketFunction->second and passing it C, but that would require the socketFunction->second function to take LPVOID(void*) parameter. By creating another function, the void* to Client* cast is made before calling the CallBackFunc
+																										//It was possible to CreateThread using socketFunction->second and passing it C, but that would require the socketFunction->second function to take LPVOID(void*) parameter. By creating another function, the void* to Client* cast is made before calling the CallBackFunc
 	}
 	return 0;
 }
@@ -71,7 +74,7 @@ MultiClientTCPServer::MultiClientTCPServer(int port, void(*callBackFunc)(Client*
 	listen(ListenSocket, SOMAXCONN);																	//Start listening. Allow maximum possible connections; theoretically infinite
 
 
-	//The CreateThread function can pass only one parameter to a new thread. To pass two parameters, they have to be packed in one.
+																										//The CreateThread function can pass only one parameter to a new thread. To pass two parameters, they have to be packed in one.
 	pair<SOCKET, ClientCallBackFunc> *socketFunction = new pair < SOCKET, ClientCallBackFunc >;			//Use pair to pack SOCKET and the ClientCallBackFunc. The pair is required from the heap so that it stays in scope after this function exits
 	socketFunction->first = ListenSocket;
 	socketFunction->second = callBackFunc;

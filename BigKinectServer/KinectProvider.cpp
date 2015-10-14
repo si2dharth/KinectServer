@@ -212,7 +212,7 @@ int KinectProvider::getBodyCount(OUT int &bodyCount) {
 	int res = getBodyMap(&buf, cap, true);									//Try to get the body index map
 	if (res != result::OK) return res;										//Make sure the body index was successfully retrieved
 	set<BYTE> bodyNumbers;													//Set makes sure that there is only one copy of each number ie, the numbers stored are all unique
-	for (int i = 0; i < cap; i++)
+	for (UINT i = 0; i < cap; i++)
 		bodyNumbers.insert(buf[i]);
 	bodyCount = bodyNumbers.size() - 1;										//The size of bodyNumber would be the number of unique numbers. Leave one for 0(background)
 	delete[] buf;															//Don't need the buffer anymore
@@ -247,12 +247,31 @@ int KinectProvider::getBodyMap(OUT BYTE **map, OUT UINT &arraySize, bool copy) {
 	return result::OK;
 }
 
-int KinectProvider::getBodyData(OUT IBody **bodies) {
+int nBodies = 0;
+int KinectProvider::getBodyData(OUT bool trackStates[], OUT Joint joints[][JointType_Count], OUT HandState handStates[][2]) {
 	if (!bodyFrameReader) throw error::BodyDataCaptureNotStarted;
 	IBodyFrame *IBF = nullptr;
 	int hr = bodyFrameReader->AcquireLatestFrame(&IBF);
 	if (hr != 0) return result::NotReady;
+	IBody *bodies[BODY_COUNT] = { 0 };
 	IBF->GetAndRefreshBodyData(BODY_COUNT, bodies);
+	for (int i = 0; i < BODY_COUNT; ++i) {
+		BOOLEAN isTracked = false;
+		if (bodies[i]->get_IsTracked(&isTracked) != 0) return result::NotReady;
+
+		if (!isTracked) {
+			trackStates[i] = false;
+			handStates[i][0] = HandState_NotTracked;
+			handStates[i][1] = HandState_NotTracked;
+		}
+		else {
+			trackStates[i] = true;
+			bodies[i]->GetJoints(JointType_Count, joints[i]);
+			bodies[i]->get_HandLeftState(&handStates[i][0]);
+			bodies[i]->get_HandRightState(&handStates[i][1]);
+		}
+		bodies[i]->Release();
+	}
 	IBF->Release();
 	return result::OK;
 }
