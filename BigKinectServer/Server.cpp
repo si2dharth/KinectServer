@@ -203,7 +203,7 @@ void BodyServer(Client *C) {
 					query = (JointType)stoi(strs[i+1]);
 
 				Joint J;
-				BT->getJoint(&J, stoi(strs[1]), query);
+				BT->getJoint(&J, stoi(strs[i]), query);
 				
 				switch (J.TrackingState) {
 				case TrackingState_Inferred:
