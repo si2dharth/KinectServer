@@ -280,11 +280,12 @@ void BodyThread::run() {
 }
 
 int BodyThread::getJoint(Joint *J, int bodyNumber, JointType jointType) {
+	bodyFP.startDataCollection();
 	if (bodyNumber > getNumberOfBodies()) {
 		J->TrackingState = TrackingState_NotTracked;
+		bodyFP.stopDataCollection();
 		return -1;
 	};
-	lck.lock();
 	set<int> bodies = bodyFP.getBodyIndices();
 	auto body = bodies.begin();
 	while (--bodyNumber > 0) {
@@ -298,11 +299,12 @@ int BodyThread::getJoint(Joint *J, int bodyNumber, JointType jointType) {
 		*J = bodyFP.getJoint(*body, jointType);
 	else
 		J->TrackingState = TrackingState_NotTracked;
-	lck.unlock();
+	bodyFP.stopDataCollection();
 	return -1;
 }
 
 int BodyThread::getHandState(bool *closed, int bodyNumber, int side) {
+	bodyFP.startDataCollection();
 	set<int> bodies = bodyFP.getBodyIndices();
 	auto body = bodies.begin();
 	while (--bodyNumber > 0) {
@@ -319,9 +321,12 @@ int BodyThread::getHandState(bool *closed, int bodyNumber, int side) {
 			*closed = bodyFP.getRightHandClosed(*body);
 	else
 		*closed = false;
+	bodyFP.stopDataCollection();
 	return 0;
 }
 
 int BodyThread::getNumberOfBodies() {
-	return bodyFP.getNumberOfBodies();		///Threading problem waiting to happen!!
+	bodyFP.startDataCollection();
+	int i = bodyFP.getNumberOfBodies();
+	bodyFP.stopDataCollection();
 }

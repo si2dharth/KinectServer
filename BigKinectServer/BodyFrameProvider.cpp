@@ -10,11 +10,34 @@ BodyFrameProvider::~BodyFrameProvider() {
 }
 
 void BodyFrameProvider::updateFrame() {
-	while (_kinect->getBodyData(trackState, joints,handStates) != KinectProvider::result::OK);
+	while (_kinect->getBodyData(tmp_trackState, tmp_joints, tmp_handStates) != KinectProvider::result::OK);
+}
+
+void BodyFrameProvider::updateData() {
+	dataMutex.lock();
+	memcpy(trackState, tmp_trackState, sizeof tmp_trackState);
+	memcpy(joints, tmp_joints, sizeof tmp_joints);
+	memcpy(handStates, tmp_handStates, sizeof tmp_handStates);
+	dataMutex.unlock();
+}
+
+void BodyFrameProvider::startDataCollection() {
+	numUsers++;
+	if (numUsers == UPDATE_COUNT)
+		collectLock.lock();
+	else
+		collectLock.try_lock();
+}
+
+void BodyFrameProvider::stopDataCollection() {
+	numUsers--;
+	if (numUsers == 0) {
+		updateData();
+		collectLock.unlock();
+	}
 }
 
 int BodyFrameProvider::getNumberOfBodies() {
-	if (joints == nullptr) return 0;
 	int res = 0;
 	for (int i = 0; i < BODY_COUNT; i++) {
 		if (trackState[i])

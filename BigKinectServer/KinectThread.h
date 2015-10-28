@@ -134,7 +134,6 @@ public:
 
 class BodyThread : public KinectThread {
 	BodyFrameProvider bodyFP;
-	mutex lck;
 public:
 	BodyThread();
 	~BodyThread();
