@@ -329,4 +329,5 @@ int BodyThread::getNumberOfBodies() {
 	bodyFP.startDataCollection();
 	int i = bodyFP.getNumberOfBodies();
 	bodyFP.stopDataCollection();
+	return i;
 }

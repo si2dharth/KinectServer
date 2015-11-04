@@ -1,11 +1,14 @@
 #include "TCP.h"
 
+#include <iostream>
+using std::cout;
+
 ///{Same as typedef} ClientCallBallFunc is type: a function pointer that takes a pointer to a Client and returns nothing
 using ClientCallBackFunc = void(*)(Client*);
+using FilterFunc = bool(*)(Client*, string);
 
 Client::Client(SOCKET socket) : ClientSocket(socket) {				//Simply initialize the ClientSocket to the socket value specified
-	BOOL noDelay = true;
-	setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (char*)&noDelay, sizeof(BOOL));
+
 }
 
 int Client::send(string s) {
@@ -31,11 +34,28 @@ void Client::close() {
 	closesocket(ClientSocket);
 }
 
+void Client::disableNagles() {
+	BOOL noDelay = true;
+	setsockopt(ClientSocket, IPPROTO_TCP, TCP_NODELAY, (char*)&noDelay, sizeof(BOOL));
+}
+
 ///This function simply calls the ClientCallBackFunc passed to it for the given Client
 DWORD __stdcall FunctionCallThread(LPVOID lParam) {
-	pair<Client*, ClientCallBackFunc>* ClientFunction = (pair<Client*, ClientCallBackFunc>*)lParam;			//Unpack to pair
-	ClientFunction->second(ClientFunction->first);															//Call the function
-	delete ClientFunction->first;																			//Delete the Client once the function completes
+	auto ClientFunction = (tuple < Client*, ClientCallBackFunc, FilterFunc, string> *)lParam;			//Unpack to tuple
+	
+	auto &client = get<0>(*ClientFunction);
+	auto &callbackFunc = get<1>(*ClientFunction);
+	auto &filterFunc = get<2>(*ClientFunction);
+	auto &ip = get<3>(*ClientFunction);
+
+	bool pass = true;
+
+	if (filterFunc != 0) {
+		pass = filterFunc(client, ip);
+	}
+
+	if (pass) callbackFunc(client);																					//Call the function
+	delete client;																							//Delete the Client once the function completes
 	delete ClientFunction;																					//Delete the pair created(by AcceptConnections)
 	return 0;
 }
@@ -45,13 +65,24 @@ DWORD __stdcall FunctionCallThread(LPVOID lParam) {
 @param lParam A pointer to a pair of SOCKET and ClientCallBackFunc having values of an open listening socket and a function pointer to the function to be called for every accepted connection.
 */
 DWORD __stdcall AcceptConnections(LPVOID lParam) {
-	pair<SOCKET, ClientCallBackFunc> *socketFunction = (pair<SOCKET, ClientCallBackFunc>*)lParam;		//Cast from void* to pair*
+	tuple<SOCKET, ClientCallBackFunc, FilterFunc> *socketFunction = (tuple<SOCKET, ClientCallBackFunc, FilterFunc>*)lParam;		//Cast from void* to pair*
 
 	while (true) {																						//Repeat forever
-		Client *C = new Client(accept(socketFunction->first, 0, 0));									//Accept a connection and start a new client from the connection formed. This is a blocking call.
-		pair<Client*, ClientCallBackFunc> *cf = new pair < Client*, ClientCallBackFunc >;				//Form a new pair in which pointer to Client and the ClientCallBackFunc are packed
-		cf->first = C;
-		cf->second = socketFunction->second;
+		sockaddr_in addr;
+		int addr_len = sizeof(addr);
+		Client *C = new Client(accept(get<0>(*socketFunction), (sockaddr*)&addr, &addr_len));									//Accept a connection and start a new client from the connection formed. This is a blocking call.
+
+		string ip = to_string(int(addr.sin_addr.s_addr & 0xFF)) + "."s +
+			to_string(int((addr.sin_addr.s_addr & 0xFF00) >> 8)) + "."s +
+			to_string(int((addr.sin_addr.s_addr & 0xFF0000) >> 16)) + "."s +
+			to_string(int((addr.sin_addr.s_addr & 0xFF000000) >> 24));
+
+
+//		pair<Client*, ClientCallBackFunc> *cf = new pair < Client*, ClientCallBackFunc >;				//Form a new pair in which pointer to Client and the ClientCallBackFunc are packed
+		//cf->first = C;
+		//cf->second = socketFunction->second;
+		auto *cf = new tuple<Client*, ClientCallBackFunc, FilterFunc, string>(make_tuple(C, get<1>(*socketFunction), get<2>(*socketFunction), ip));
+
 		DWORD thread;
 		CreateThread(0, 0, FunctionCallThread, cf, 0, &thread);											//Start a new thread for the same
 																										//It was possible to CreateThread using socketFunction->second and passing it C, but that would require the socketFunction->second function to take LPVOID(void*) parameter. By creating another function, the void* to Client* cast is made before calling the CallBackFunc
@@ -59,7 +90,7 @@ DWORD __stdcall AcceptConnections(LPVOID lParam) {
 	return 0;
 }
 
-MultiClientTCPServer::MultiClientTCPServer(int port, void(*callBackFunc)(Client*)) {
+MultiClientTCPServer::MultiClientTCPServer(int port, void(*callBackFunc)(Client*), bool (*filterFunc)(Client*, string)) {
 	WSAStartup(MAKEWORD(2, 2), &wsaData);																//Initialize for creating sockets
 	ListenSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);											//Create a listening socket: a server
 
@@ -75,9 +106,13 @@ MultiClientTCPServer::MultiClientTCPServer(int port, void(*callBackFunc)(Client*
 
 
 																										//The CreateThread function can pass only one parameter to a new thread. To pass two parameters, they have to be packed in one.
-	pair<SOCKET, ClientCallBackFunc> *socketFunction = new pair < SOCKET, ClientCallBackFunc >;			//Use pair to pack SOCKET and the ClientCallBackFunc. The pair is required from the heap so that it stays in scope after this function exits
-	socketFunction->first = ListenSocket;
-	socketFunction->second = callBackFunc;
+	//pair<SOCKET, ClientCallBackFunc> *socketFunction = new pair < SOCKET, ClientCallBackFunc >;			//Use pair to pack SOCKET and the ClientCallBackFunc. The pair is required from the heap so that it stays in scope after this function exits
+	tuple<SOCKET, ClientCallBackFunc, FilterFunc> *socketFunction = new tuple <SOCKET, ClientCallBackFunc, FilterFunc>;
+	
+	std::get<0>(*socketFunction) = ListenSocket;
+	std::get<1>(*socketFunction) = callBackFunc;
+	std::get<2>(*socketFunction) = filterFunc;
+
 	DWORD threadID;
 	CreateThread(0, 0, AcceptConnections, socketFunction, 0, &threadID);								//Start the AcceptConnections functions on a new thread and pass it the ListenSocket and the function to be called.
 

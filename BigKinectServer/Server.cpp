@@ -180,7 +180,7 @@ void BodyServer(Client *C) {
 	}
 	BTUsers++;
 	jMutex.unlock();
-
+	C->disableNagles();
 	clock_t lastSendTime = clock();
 	string s;
 	C->receive(s);

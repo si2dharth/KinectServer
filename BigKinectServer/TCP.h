@@ -42,6 +42,9 @@ public:
 	Closes the connection with the client
 	*/
 	void close();
+
+	///Disable Nagle's algorithm, allowing fast transmission of small packets
+	void disableNagles();
 };
 
 
@@ -62,7 +65,7 @@ public:
 	@param [in] ClientHandlerFunc The function to call whenever a connection request is made on specified port.
 	The function should accept a pointer to a Client object. The function should delete the Client object after use.
 	*/
-	MultiClientTCPServer(int port, void(*ClientHandlerFunc)(Client*));
+	MultiClientTCPServer(int port, void(*ClientHandlerFunc)(Client*), bool (*filterFunc)(Client*, string) = 0);
 
 	///Closes the listening socket.
 	~MultiClientTCPServer();
