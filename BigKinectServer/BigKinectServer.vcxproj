@@ -75,6 +75,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="BodyFrameProvider.h" />
+    <ClInclude Include="ConnectionManager.h" />
     <ClInclude Include="KinectProvider.h" />
     <ClInclude Include="KinectThread.h" />
     <ClInclude Include="Server.h" />
@@ -87,6 +88,7 @@
     <ClCompile Include="KinectThread.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="TCP.cpp" />
   </ItemGroup>
   <ItemGroup>

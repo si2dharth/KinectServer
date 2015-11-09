@@ -37,6 +37,9 @@ public:
 	*/
 	int receive(string &s);
 
+	///Receive messages until a specific character is found
+	int receive(string &s, string delim);
+
 	///Close the connection
 	/**
 	Closes the connection with the client

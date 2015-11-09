@@ -29,6 +29,27 @@ int Client::receive(string &s) {
 	return iRes;
 }
 
+int Client::receive(string & s, string delim)
+{
+	s = "";
+	char recvbuf[2];
+	recvbuf[1] = 0;
+	while (delim.find_first_of(recvbuf[0]) == delim.npos) {
+		int iRes = recv(ClientSocket, recvbuf, 1, 0);
+		
+		if (iRes <= 0) break;
+		if (delim.find_first_of(recvbuf[0]) != delim.npos) break;
+		if (recvbuf[0] == 8) s = s.substr(0, s.length() - 1);
+		if (recvbuf[0] < 32 || recvbuf[0] > 126) continue;
+
+		
+		s += recvbuf;
+	};
+	if (delim.find_first_of(recvbuf[0]) == delim.npos) return -1;
+	cout << "Returning " << s << endl;
+	return s.length();
+}
+
 void Client::close() {
 	shutdown(ClientSocket, SD_SEND);								//Call to the global shutdown and closesocket functions from WinSock2
 	closesocket(ClientSocket);
@@ -54,7 +75,10 @@ DWORD __stdcall FunctionCallThread(LPVOID lParam) {
 		pass = filterFunc(client, ip);
 	}
 
-	if (pass) callbackFunc(client);																					//Call the function
+	if (pass)
+		callbackFunc(client);																					//Call the function
+	else
+		client->close();
 	delete client;																							//Delete the Client once the function completes
 	delete ClientFunction;																					//Delete the pair created(by AcceptConnections)
 	return 0;

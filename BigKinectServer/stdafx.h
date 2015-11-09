@@ -8,6 +8,9 @@
 #include <d2d1.h>
 #include <Kinect.h>
 #include <string>
+#include <vector>
 #pragma comment(lib, "d2d1.lib")
 
 using namespace std;
+
+vector<string> split(string s, char delim = '|');

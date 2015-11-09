@@ -156,16 +156,7 @@ map<string, JointType> jointNames = {
 	{"ThumbRight",JointType_ThumbRight}
 };
 
-vector<string> split(string s) {
-	vector<string> res;
-	int i;
-	while ((i = s.find_first_of('|')) != -1) {
-		res.push_back(s.substr(0, i));
-		s = s.substr(i + 1);
-	}
-	res.push_back(s);
-	return res;
-}
+
 
 int Clip(int i) {
 	if (i < 0) return 0;
