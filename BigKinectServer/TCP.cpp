@@ -7,8 +7,8 @@ using std::cout;
 using ClientCallBackFunc = void(*)(Client*);
 using FilterFunc = bool(*)(Client*, string);
 
-Client::Client(SOCKET socket) : ClientSocket(socket) {				//Simply initialize the ClientSocket to the socket value specified
-
+Client::Client(SOCKET socket, string ip) : ClientSocket(socket), ip(ip){				//Simply initialize the ClientSocket to the socket value specified
+	closed = false;
 }
 
 int Client::send(string s) {
@@ -51,13 +51,19 @@ int Client::receive(string & s, string delim)
 }
 
 void Client::close() {
+	if (closed) return;
 	shutdown(ClientSocket, SD_SEND);								//Call to the global shutdown and closesocket functions from WinSock2
 	closesocket(ClientSocket);
+	closed = true;
 }
 
 void Client::disableNagles() {
 	BOOL noDelay = true;
 	setsockopt(ClientSocket, IPPROTO_TCP, TCP_NODELAY, (char*)&noDelay, sizeof(BOOL));
+}
+
+string Client::getIP() {
+	return ip;
 }
 
 ///This function simply calls the ClientCallBackFunc passed to it for the given Client
@@ -94,12 +100,14 @@ DWORD __stdcall AcceptConnections(LPVOID lParam) {
 	while (true) {																						//Repeat forever
 		sockaddr_in addr;
 		int addr_len = sizeof(addr);
-		Client *C = new Client(accept(get<0>(*socketFunction), (sockaddr*)&addr, &addr_len));									//Accept a connection and start a new client from the connection formed. This is a blocking call.
+		SOCKET s = accept(get<0>(*socketFunction), (sockaddr*)&addr, &addr_len);		
 
 		string ip = to_string(int(addr.sin_addr.s_addr & 0xFF)) + "."s +
 			to_string(int((addr.sin_addr.s_addr & 0xFF00) >> 8)) + "."s +
 			to_string(int((addr.sin_addr.s_addr & 0xFF0000) >> 16)) + "."s +
 			to_string(int((addr.sin_addr.s_addr & 0xFF000000) >> 24));
+
+		Client *C = new Client(s, ip);									//Accept a connection and start a new client from the connection formed. This is a blocking call.
 
 
 //		pair<Client*, ClientCallBackFunc> *cf = new pair < Client*, ClientCallBackFunc >;				//Form a new pair in which pointer to Client and the ClientCallBackFunc are packed

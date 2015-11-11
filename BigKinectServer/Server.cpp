@@ -1,5 +1,6 @@
 #include "Server.h"
 #include "KinectThread.h"
+#include "ConnectionManager.h"
 
 #include<string>
 #include<vector>
@@ -58,6 +59,7 @@ void ColorImageServer(Client *C) {
 		CIT = new ColorImageThread();							//Create a ColorImageThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
 	CITUsers++;
+	addConnection(C, "Color_Images");
 	cMutex.unlock();
 	
 	processClientMessages(CIT, C);
@@ -68,6 +70,7 @@ void ColorImageServer(Client *C) {
 		delete CIT;
 		CIT = nullptr;
 	}
+	removeConnection(C);
 	cMutex.unlock();
 }
 
@@ -77,12 +80,14 @@ void InfraredImageServer(Client *C) {
 		IIT = new InfraredImageThread();						//Create a InfraredImageThread if it hasn't been created yet. This way, a thread is started only if it is required	
 	}
 	IITUsers++;
+	addConnection(C, "Infrared_Images");
 	iMutex.unlock();
 
 	processClientMessages(IIT, C);
 
 	iMutex.lock();
 	IITUsers--;
+	removeConnection(C);
 	if (IITUsers == 0) {
 		delete IIT;
 		IIT = nullptr;
@@ -96,12 +101,14 @@ void DepthMapServer(Client *C) {
 		DMT = new DepthMapThread();								//Create a DepthMapThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
 	DMTUsers++;
+	addConnection(C, "Depth_Map");
 	dMutex.unlock();
 
 	processClientMessages(DMT, C);
 
 	dMutex.lock();
 	DMTUsers--;
+	removeConnection(C);
 	if (DMTUsers == 0) {
 		delete DMT;
 		DMT = nullptr;
@@ -115,12 +122,14 @@ void BodyMapServer(Client *C) {
 		BMT = new BodyMapThread();								//Create a BodyMapThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
 	BMTUsers++;
+	addConnection(C,"Body_Map");
 	bMutex.unlock();
 
 	processClientMessages(BMT, C);
 
 	bMutex.lock();
 	BMTUsers--;
+	removeConnection(C);
 	if (BMTUsers == 0) {
 		delete BMT;
 		BMT = nullptr;
@@ -170,6 +179,7 @@ void BodyServer(Client *C) {
 		BT = new BodyThread();
 	}
 	BTUsers++;
+	addConnection(C, "Skeleton_Data");
 	jMutex.unlock();
 	C->disableNagles();
 	clock_t lastSendTime = clock();
@@ -252,6 +262,7 @@ void BodyServer(Client *C) {
 
 	jMutex.lock();
 	BTUsers--;
+	removeConnection(C);
 	if (BTUsers == 0) {
 		delete BT;
 		BT = nullptr;

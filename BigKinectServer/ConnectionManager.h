@@ -2,15 +2,8 @@
 #include "stdafx.h"
 #include "TCP.h"
 
-class ConnectedClient {
-	string ip;
-	Client *clientHandle;
-	DWORD threadID;
-public:
-	ConnectedClient(string ip, Client* clientHandle, DWORD threadID);
-};
+void addConnection(Client *client, string type);
+void stopConnection(string ip, string type);
+void removeConnection(Client *client);
 
-class ConnectionManager {
-public:
-	
-};
+vector<pair<string, string>> getConnections();

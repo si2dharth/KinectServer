@@ -12,13 +12,15 @@ Create an object from a socket handle and then use the object to communicate wit
 This class is used with MultiClientTCPServer. The MultiClientTCPServer will always pass a Client object to the Client handling function so that a thread can start communicating with the Client directly.
 */
 class Client {
+	string ip;
 	SOCKET ClientSocket;		///< Handle to the socket to which the client is connected
+	bool closed;
 public:
 	///Initialize the client with the specified socket.
 	/**
 	@param socket Handle to the socket to which client is connected.
 	*/
-	Client(SOCKET socket);
+	Client(SOCKET socket, string ip);
 
 	///Send a message to the client
 	/**
@@ -48,6 +50,8 @@ public:
 
 	///Disable Nagle's algorithm, allowing fast transmission of small packets
 	void disableNagles();
+
+	string getIP();
 };
 
 
