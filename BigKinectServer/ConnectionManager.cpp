@@ -22,7 +22,6 @@ void stopConnection(string ip, string type) {
 		if (C->client->getIP() == ip && C->type == type) {
 			C->client->close();
 			connections.erase(C);
-			break;
 		}
 	}
 }
@@ -31,7 +30,6 @@ void removeConnection(Client *client) {
 	for (auto C = connections.begin(); C != connections.end(); C++) {
 		if (C->client == client) {
 			connections.erase(C);
-			break;
 		}
 	}
 }

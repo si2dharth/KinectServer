@@ -177,6 +177,7 @@ void BodyServer(Client *C) {
 	jMutex.lock();
 	if (!BT) {
 		BT = new BodyThread();
+		Sleep(1000);
 	}
 	BTUsers++;
 	addConnection(C, "Skeleton_Data");
