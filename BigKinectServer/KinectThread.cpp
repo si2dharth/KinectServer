@@ -9,6 +9,10 @@ void setKinectProvider(KinectProvider* KP) {
 	_kinect = KP;
 }
 
+KinectProvider* getKinectProvider() {
+	return _kinect;
+}
+
 
 KinectThread::KinectThread() : stopThread(false), backgroundWorker(&KinectThread::runThread, this) {
 	if (!_kinect) throw "Kinect not set";
@@ -20,7 +24,7 @@ KinectThread::~KinectThread() {
 
 void KinectThread::runThread() {
 	while (!stopThread) {
-		Sleep(3);
+		Sleep(3);							//Keeps CPU usage low and allows all threads to run
 		this->run();
 	}
 }
@@ -62,13 +66,26 @@ void ImageThread::getImage(void **image, UINT &cap) {
 }
 
 
+void ColorImageThread::initialize() {
+	bool initialized = false;
+	while (!initialized) {
+		try {
+			_kinect->startColorCapture();
+			initialized = true;
+		}
+		catch (...) {}
+	}
+}
+
+void ColorImageThread::finalize() {
+	_kinect->stopColorCapture();
+}
+
 ColorImageThread::ColorImageThread() : ImageThread() {
-	_kinect->startColorCapture();
 }
 
 ColorImageThread::~ColorImageThread() {
 	destroy();
-	_kinect->stopColorCapture();
 }
 
 ///Make sure the given value lies between 0 and 255
@@ -210,14 +227,26 @@ void *ColorImageThread::collectImage(UINT &capacity) {
 	return JPG;
 }
 
+void InfraredImageThread::initialize() {
+	bool initialized = false;
+	while (!initialized) {
+		try {
+			_kinect->startInfraredCapture();
+			initialized = true;
+		} 
+		catch (...) {}
+	} 
+}
+
+void InfraredImageThread::finalize() {
+	_kinect->stopInfraredCapture();
+}
 
 InfraredImageThread::InfraredImageThread() : ImageThread() {
-	_kinect->startInfraredCapture();
 }
 
 InfraredImageThread::~InfraredImageThread() {
 	destroy();
-	_kinect->stopInfraredCapture();
 }
 
 void *InfraredImageThread::collectImage(UINT &cap) {
@@ -227,13 +256,27 @@ void *InfraredImageThread::collectImage(UINT &cap) {
 	return image;
 }
 
+void DepthMapThread::initialize() {
+	bool initialized = false;
+	while (!initialized) {
+		try {
+			_kinect->startDepthMapCapture();
+			initialized = true;
+		}
+		catch (...) {}
+	}
+}
+
+void DepthMapThread::finalize() {
+	_kinect->stopDepthMapCapture();
+}
+
 DepthMapThread::DepthMapThread() : ImageThread() {
-	_kinect->startDepthMapCapture();
+	
 }
 
 DepthMapThread::~DepthMapThread() {
 	destroy();
-	_kinect->stopDepthMapCapture();
 }
 
 void *DepthMapThread::collectImage(UINT &cap) {
@@ -243,8 +286,24 @@ void *DepthMapThread::collectImage(UINT &cap) {
 	return image;
 }
 
+
+void BodyMapThread::initialize() {
+	bool initialized = false;
+	while (!initialized) {
+		try {
+			_kinect->startBodyMapCapture();
+			initialized = true;
+		} 
+		catch (...) {}
+	}
+}
+
+void BodyMapThread::finalize() {
+	_kinect->stopBodyMapCapture();
+}
+
 BodyMapThread::BodyMapThread() : ImageThread() {
-	_kinect->startBodyMapCapture();
+	//_kinect->startBodyMapCapture();
 }
 
 BodyMapThread::~BodyMapThread() {
@@ -267,7 +326,19 @@ void *BodyMapThread::collectImage(UINT &cap) {
 	return compressedImage;
 }
 
-BodyThread::BodyThread() : KinectThread(), bodyFP(_kinect) {};
+
+BodyFrameProvider* BodyThread::bodyFP;
+
+void BodyThread::initialize() {
+	bodyFP = new BodyFrameProvider(_kinect);
+}
+
+void BodyThread::finalize() {
+	delete bodyFP;
+	bodyFP = nullptr;
+}
+
+BodyThread::BodyThread() : KinectThread() {};
 
 BodyThread::~BodyThread() {
 	destroy();
@@ -275,18 +346,18 @@ BodyThread::~BodyThread() {
 
 void BodyThread::run() {
 	//lck.lock();
-	bodyFP.updateFrame();
+	bodyFP->updateFrame();
 	//lck.unlock();
 }
 
 int BodyThread::getJoint(Joint *J, int bodyNumber, JointType jointType) {
-	bodyFP.startDataCollection();
+	bodyFP->startDataCollection();
 	if (bodyNumber > getNumberOfBodies()) {
 		J->TrackingState = TrackingState_NotTracked;
-		bodyFP.stopDataCollection();
+		bodyFP->stopDataCollection();
 		return -1;
 	};
-	set<int> bodies = bodyFP.getBodyIndices();
+	set<int> bodies = bodyFP->getBodyIndices();
 	auto body = bodies.begin();
 	while (--bodyNumber > 0) {
 		if (next(body) == bodies.end())
@@ -296,16 +367,16 @@ int BodyThread::getJoint(Joint *J, int bodyNumber, JointType jointType) {
 	}
 
 	if (body != bodies.end())
-		*J = bodyFP.getJoint(*body, jointType);
+		*J = bodyFP->getJoint(*body, jointType);
 	else
 		J->TrackingState = TrackingState_NotTracked;
-	bodyFP.stopDataCollection();
+	bodyFP->stopDataCollection();
 	return -1;
 }
 
 int BodyThread::getHandState(bool *closed, int bodyNumber, int side) {
-	bodyFP.startDataCollection();
-	set<int> bodies = bodyFP.getBodyIndices();
+	bodyFP->startDataCollection();
+	set<int> bodies = bodyFP->getBodyIndices();
 	auto body = bodies.begin();
 	while (--bodyNumber > 0) {
 		if (next(body) == bodies.end())
@@ -316,18 +387,18 @@ int BodyThread::getHandState(bool *closed, int bodyNumber, int side) {
 
 	if (body != bodies.end())
 		if (side == 1)
-			*closed = bodyFP.getLeftHandClosed(*body);
+			*closed = bodyFP->getLeftHandClosed(*body);
 		else
-			*closed = bodyFP.getRightHandClosed(*body);
+			*closed = bodyFP->getRightHandClosed(*body);
 	else
 		*closed = false;
-	bodyFP.stopDataCollection();
+	bodyFP->stopDataCollection();
 	return 0;
 }
 
 int BodyThread::getNumberOfBodies() {
-	bodyFP.startDataCollection();
-	int i = bodyFP.getNumberOfBodies();
-	bodyFP.stopDataCollection();
+	bodyFP->startDataCollection();
+	int i = bodyFP->getNumberOfBodies();
+	bodyFP->stopDataCollection();
 	return i;
 }

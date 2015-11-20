@@ -89,6 +89,7 @@ void KinectProvider::startBodyDataCapture() {
 		IBodyFrameSource *IBS = nullptr;
 		int hr = sensor->get_BodyFrameSource(&IBS);
 		if (hr != 0) throw error::BodyDataSourceNotReady;
+		
 		hr = IBS->OpenReader(&bodyFrameReader);
 		IBS->Release();										   //Don't need the source anymore
 		if (hr != 0) {

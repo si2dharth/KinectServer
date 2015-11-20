@@ -56,6 +56,7 @@ void processClientMessages(ImageThread *IT, Client *C) {
 void ColorImageServer(Client *C) {
 	cMutex.lock();
 	if (CIT == nullptr) {
+		ColorImageThread::initialize();
 		CIT = new ColorImageThread();							//Create a ColorImageThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
 	CITUsers++;
@@ -69,6 +70,7 @@ void ColorImageServer(Client *C) {
 	if (CITUsers == 0) {
 		delete CIT;
 		CIT = nullptr;
+		ColorImageThread::finalize();
 	}
 	removeConnection(C);
 	cMutex.unlock();
@@ -77,6 +79,7 @@ void ColorImageServer(Client *C) {
 void InfraredImageServer(Client *C) {
 	iMutex.lock();
 	if (!IIT) {
+		InfraredImageThread::initialize();
 		IIT = new InfraredImageThread();						//Create a InfraredImageThread if it hasn't been created yet. This way, a thread is started only if it is required	
 	}
 	IITUsers++;
@@ -91,6 +94,7 @@ void InfraredImageServer(Client *C) {
 	if (IITUsers == 0) {
 		delete IIT;
 		IIT = nullptr;
+		InfraredImageThread::finalize();
 	}
 	iMutex.unlock();
 }
@@ -98,6 +102,7 @@ void InfraredImageServer(Client *C) {
 void DepthMapServer(Client *C) {
 	dMutex.lock();
 	if (!DMT) {
+		DepthMapThread::initialize();
 		DMT = new DepthMapThread();								//Create a DepthMapThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
 	DMTUsers++;
@@ -112,6 +117,7 @@ void DepthMapServer(Client *C) {
 	if (DMTUsers == 0) {
 		delete DMT;
 		DMT = nullptr;
+		DepthMapThread::finalize();
 	}
 	dMutex.unlock();
 }
@@ -119,6 +125,7 @@ void DepthMapServer(Client *C) {
 void BodyMapServer(Client *C) {
 	bMutex.lock();
 	if (!BMT) {
+		BodyMapThread::initialize();
 		BMT = new BodyMapThread();								//Create a BodyMapThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
 	BMTUsers++;
@@ -133,6 +140,7 @@ void BodyMapServer(Client *C) {
 	if (BMTUsers == 0) {
 		delete BMT;
 		BMT = nullptr;
+		BodyMapThread::finalize();
 	}
 	bMutex.unlock();
 }
@@ -176,8 +184,9 @@ int Clip(int i) {
 void BodyServer(Client *C) {
 	jMutex.lock();
 	if (!BT) {
+		BodyThread::initialize();
 		BT = new BodyThread();
-		Sleep(1000);
+		//Sleep(1000);
 	}
 	BTUsers++;
 	addConnection(C, "Skeleton_Data");
@@ -267,6 +276,7 @@ void BodyServer(Client *C) {
 	if (BTUsers == 0) {
 		delete BT;
 		BT = nullptr;
+		BodyThread::finalize();
 	}
 	jMutex.unlock();
 }

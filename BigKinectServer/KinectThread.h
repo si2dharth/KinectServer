@@ -15,6 +15,8 @@ using namespace std;
 */
 void setKinectProvider(KinectProvider* KP);
 
+KinectProvider* getKinectProvider();
+
 ///Pre-calculate conversion values for YUV2 to RGB format
 /**
 Call this function at the start of program.
@@ -94,6 +96,9 @@ public:
 
 	///Destructor. Stops color capture
 	~ColorImageThread();
+
+	static void initialize();
+	static void finalize();
 };
 
 ///Extension of ImageThread. Collects infrared image frames from the kinect.
@@ -106,6 +111,9 @@ public:
 
 	///Destructor. Stops infrared capture
 	~InfraredImageThread();
+
+	static void initialize();
+	static void finalize();
 };
 
 ///Extension of ImageThread. Collects depth map frames from the kinect.
@@ -118,6 +126,9 @@ public:
 
 	///Destructor. Stops depth map capture
 	~DepthMapThread();
+
+	static void initialize();
+	static void finalize();
 };
 
 ///Extension of ImageThread. Collects body map frames from the kinect.
@@ -130,10 +141,13 @@ public:
 	
 	///Destructor. Stops body map capture
 	~BodyMapThread();
+
+	static void initialize();
+	static void finalize();
 };
 
 class BodyThread : public KinectThread {
-	BodyFrameProvider bodyFP;
+	static BodyFrameProvider* bodyFP;
 public:
 	BodyThread();
 	~BodyThread();
@@ -142,4 +156,7 @@ public:
 	int getJoint(Joint *J, int bodyNumber, JointType jointType);
 	int getHandState(bool *closed, int bodyNumber, int side);
 	int getNumberOfBodies();
+
+	static void initialize();
+	static void finalize();
 };
