@@ -63,9 +63,7 @@ void SpeechProvider::initializeRecognizer() {
 	speechGrammar->GetRule(L"ROOT", 0, SPRAF_Active | SPRAF_Root | SPRAF_TopLevel | SPRAF_Dynamic, TRUE, &initState);
 	//speechGrammar->AddRuleTransition(initState, NULL, initState, 1, NULL);
 	//hr = speechGrammar->LoadCmdFromFile(L"grammarFile.xml", SPLO_DYNAMIC);
-	if (hr < 0) throw 1;	
-
-
+	if (hr < 0) throw 1;
 }
 
 
@@ -168,4 +166,15 @@ string SpeechProvider::processSpeech() {
 		speechContext->GetEvents(1, &curEvent, &fetched);
 	}
 	return fresult;
+}
+
+SpeechProvider::~SpeechProvider() {
+	pauseRecognition();
+	kStream->SetSpeechState(false);
+	kStream->Release();
+	speechGrammar->Release();
+	speechContext->Release();
+	speechStream->Release();
+	speechRecognizer->Release();
+	commands.clear();
 }

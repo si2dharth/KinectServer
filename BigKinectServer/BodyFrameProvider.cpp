@@ -2,7 +2,16 @@
 
 BodyFrameProvider::BodyFrameProvider(KinectProvider *KP){
 	_kinect = KP;
-	_kinect->startBodyDataCapture();
+	bool started = false;
+	while (!started) {
+		try {
+			_kinect->startBodyDataCapture();
+			started = true;
+		}
+		catch (...) {
+
+		}
+	}
 }
 
 BodyFrameProvider::~BodyFrameProvider() {

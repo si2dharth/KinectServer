@@ -45,6 +45,7 @@ class SpeechProvider {
 	string processSpeech();
 public:
 	SpeechProvider(KinectProvider *KP);
+	~SpeechProvider();
 	void addToGrammar(string command);
 	void removeFromGrammar(string command);
 
