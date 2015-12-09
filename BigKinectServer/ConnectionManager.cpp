@@ -27,9 +27,10 @@ void stopConnection(string ip, string type) {
 }
 
 void removeConnection(Client *client) {
-	for (auto C = connections.begin(); C != connections.end(); C++) {
+	for (auto C = connections.begin(); C != connections.end();) {
 		if (C->client == client) {
-			connections.erase(C);
+			C++;
+			connections.erase(prev(C));
 		}
 	}
 }

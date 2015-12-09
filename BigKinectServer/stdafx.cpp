@@ -10,3 +10,7 @@ vector<string> split(string s, char delim) {
 	res.push_back(s);
 	return res;
 }
+
+wstring convertToWStr(string s) {
+	return wstring(s.begin(), s.end());
+}

@@ -20,3 +20,6 @@ void BodyMapServer(Client *C);
 
 ///
 void BodyServer(Client *C);
+
+///
+void SpeechServer(Client *C);

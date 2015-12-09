@@ -4,7 +4,7 @@ using namespace std;
 
 KinectProvider::KinectProvider() :		//Initialize all to nullptr
 	sensor(nullptr),
-	audioBeamReader(nullptr),
+	audioBeamList(nullptr),
 	colorFrameReader(nullptr),
 	bodyFrameReader(nullptr),
 	bodyMapReader(nullptr),
@@ -25,7 +25,7 @@ KinectProvider::KinectProvider() :		//Initialize all to nullptr
 
 KinectProvider::~KinectProvider() {
 	//Release everything
-	if (audioBeamReader) audioBeamReader->Release();
+	if (audioBeamList) audioBeamList->Release();
 	if (colorFrameReader) colorFrameReader->Release();
 	if (bodyFrameReader) bodyFrameReader->Release();
 	if (bodyMapReader) bodyMapReader->Release();
@@ -153,15 +153,16 @@ void KinectProvider::stopBodyMapCapture() {
 }
 
 void KinectProvider::startAudioCapture() {
-	if (!audioBeamReader) {
+	if (!audioBeamList) {
 		//Standard method: Get the source, get reader from source
 		IAudioSource *IAS = nullptr;
 		int hr = sensor->get_AudioSource(&IAS);
 		if (hr != 0) throw error::AudioSourceNotReady;
-		hr = IAS->OpenReader(&audioBeamReader);
+		hr = IAS->get_AudioBeams(&audioBeamList);
+		
 		IAS->Release();										   //Don't need the source anymore
 		if (hr != 0) {
-			audioBeamReader = nullptr;						   //Make sure its not set to an arbitrary value in case of failure
+			audioBeamList = nullptr;						   //Make sure its not set to an arbitrary value in case of failure
 			throw error::CouldNotOpenAudioReader;
 		}
 	}
@@ -169,10 +170,10 @@ void KinectProvider::startAudioCapture() {
 }
 
 void KinectProvider::stopAudioCapture() {
-	if (!audioBeamReader) return;
+	if (!audioBeamList) return;
 	if (--audioUsers) return;
-	audioBeamReader->Release();
-	audioBeamReader = nullptr;
+	audioBeamList->Release();
+	audioBeamList = nullptr;
 }
 
 
@@ -276,14 +277,14 @@ int KinectProvider::getBodyData(OUT bool trackStates[], OUT Joint joints[][Joint
 	return result::OK;
 }
 
-void KinectProvider::processAudioData() {
-	IAudioBeamFrameList *IABFL = nullptr;
-	audioBeamReader->AcquireLatestBeamFrames(&IABFL);
-	UINT frmCount = 0;
-	IABFL->get_BeamCount(&frmCount);
-	for (int i = 0; i < frmCount; i++) {
-		IAudioBeamFrame *IABF = nullptr;
-		IABFL->OpenAudioBeamFrame(i, &IABF);
-		//IABF->
-	}
+int KinectProvider::getAudioData(int index, OUT IStream *&stream) {
+	if (!audioBeamList) throw error::AudioCaptureNotStarted;
+	IAudioBeam *audioBeam = nullptr;
+	HRESULT hr;
+	hr = audioBeamList->OpenAudioBeam(index, &audioBeam);
+	if (hr != 0) return result::NotReady;
+	hr = audioBeam->OpenInputStream(&stream);
+	if (hr != 0) return result::NotReady;
+	audioBeam->Release();
+	return result::OK;
 }

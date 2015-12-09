@@ -27,11 +27,11 @@ void KinectThread::runThread() {
 
 void KinectThread::destroy() {
 	stopThread = true;
-	if (backgroundWorker.joinable()) 
+	if (backgroundWorker.joinable())
 		backgroundWorker.join();
 }
 
-ImageThread::ImageThread() : KinectThread(),lck() {
+ImageThread::ImageThread() : KinectThread(), lck() {
 }
 
 ImageThread::~ImageThread() {
@@ -41,12 +41,12 @@ ImageThread::~ImageThread() {
 
 void ImageThread::run() {
 	UINT tmpCap;
-	
+
 	void* img = collectImage(tmpCap);
 	lck.lock();								//As image is to be replaced, make sure no one else can access it
 	capacity = tmpCap;
 	if (image) delete[] image;				//Delete the old image
-	image = img;							
+	image = img;
 	lck.unlock();							//Replace done. Continue.
 }
 
@@ -204,7 +204,7 @@ void *ColorImageThread::collectImage(UINT &capacity) {
 	}
 	capacity *= sizeof(BYTE) * 3 / 2;										//Update the capacity
 	delete[] image;															//Delete the image received from the Kinect. Now, only imageRGB is required
-	
+
 	BYTE *JPG = convertToJPEG(imageRGB, capacity);							//Convert the RGB image to JPEG
 	delete[] imageRGB;														//Now, imageRGB is also not needed. Only JPG is needed.
 	return JPG;
@@ -259,7 +259,7 @@ void *BodyMapThread::collectImage(UINT &cap) {
 	compressedImage = new BYTE[cap / 2];
 	cap *= sizeof(BYTE);
 	for (int i = 0; i < cap; i += 2) {
-		compressedImage[i >> 1] = (image[i] << 4) + image[i+1];
+		compressedImage[i >> 1] = (image[i] << 4) + image[i + 1];
 	}
 	delete[]image;
 
@@ -291,7 +291,7 @@ int BodyThread::getJoint(Joint *J, int bodyNumber, JointType jointType) {
 	while (--bodyNumber > 0) {
 		if (next(body) == bodies.end())
 			break;
-		else 
+		else
 			body = next(body);
 	}
 
@@ -330,4 +330,62 @@ int BodyThread::getNumberOfBodies() {
 	int i = bodyFP.getNumberOfBodies();
 	bodyFP.stopDataCollection();
 	return i;
+}
+
+AudioThread::AudioThread() : KinectThread(), speechP(_kinect), curUser(0) {}
+
+AudioThread::~AudioThread() {}
+
+int AudioThread::registerUser() {
+	return curUser++;
+}
+
+void AudioThread::unregisterUser(int userID) {
+	spokenWords.erase(userID);
+	for (const string &s : phraseDict[userID]) {
+		bool remove = true;
+		for (auto &p : phraseDict) {
+			if (p.first == userID) continue;
+			if (p.second.find(s) != p.second.end()) {
+				remove = false;
+				break;
+			}
+		}
+		if (remove) speechP.removeFromGrammar(s);
+	}
+	phraseDict.erase(userID);
+}
+
+void AudioThread::run() {
+	edit.lock();
+	string s = speechP.getSpokenWord();
+	if (s != "") {
+		q.lock();
+		for (auto &p : spokenWords) {
+			if (phraseDict[p.first].find(s) != phraseDict[p.first].end()) {
+				p.second.push(s);
+			}
+		}
+		q.unlock();
+	}
+	edit.unlock();
+}
+
+void AudioThread::addPhrase(int userID, string phrase) {
+	edit.lock();
+	speechP.addToGrammar(phrase);
+	edit.unlock();
+	phraseDict[userID].insert(phrase);
+}
+
+bool AudioThread::getSpokenPhrase(int userID, string &phrase) {
+	bool result = false;
+	q.lock();
+	if (spokenWords[userID].size() > 0) {
+		phrase = spokenWords[userID].front();
+		result = true;
+		spokenWords[userID].pop();
+	}
+	q.unlock();
+	return result;
 }

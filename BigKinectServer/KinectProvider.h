@@ -12,13 +12,13 @@ class KinectProvider {
 		bodyMapUsers = 0, 							///<The number of users using body maps
 		depthUsers = 0;								///<The number of users using depth maps
 
-	IAudioBeamFrameReader *audioBeamReader;			///<The reader for audioBeams .Returns various frames each time, with PCM values at 16 kHz and direction in each frame
+	//IAudioBeamFrameReader *audioBeamReader;			///<The reader for audioBeams .Returns various frames each time, with PCM values at 16 kHz and direction in each frame
 	IColorFrameReader *colorFrameReader;			///<The reader for color image frames. Returns YUV2 image
 	IBodyFrameReader *bodyFrameReader;				///<The reader for body joint data frames. Returns body joint data
 	IBodyIndexFrameReader *bodyMapReader;			///<The reader for body index map frames. Returns BYTE map
 	IDepthFrameReader *depthFrameReader;			///<The reader for depth map frames. Returns UINT16 image
 	IInfraredFrameReader *infraredFrameReader;		///<The reader for infrared frames. Returns UINT16 image
-
+	IAudioBeamList *audioBeamList;
 public:
 	///The constructor. Finds a connected Kinect and starts interface with it.
 	/**
@@ -136,12 +136,7 @@ public:
 	int getBodyMap(OUT BYTE **map, OUT UINT &arraySize, bool copy = false);
 	
 	///Not implemented
-	int getAudioData(int index, OUT IStream *stream);
-
-	///Not implemented
-	void processAudioData();
-
-
+	int getAudioData(int index, OUT IStream *&stream);
 
 	enum error {
 		SensorNotFound,

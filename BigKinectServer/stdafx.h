@@ -14,3 +14,16 @@
 using namespace std;
 
 vector<string> split(string s, char delim = '|');
+wstring convertToWStr(string s);
+
+#include <Shlobj.h>
+
+	template<class Interface>
+inline void SafeRelease(Interface *& pInterfaceToRelease)
+{
+	if (pInterfaceToRelease != NULL)
+	{
+		pInterfaceToRelease->Release();
+		pInterfaceToRelease = NULL;
+	}
+}

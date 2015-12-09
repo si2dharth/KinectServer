@@ -67,8 +67,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(KINECTSDK20_DIR)\inc;$(IncludePath);$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(KINECTSDK20_DIR)\lib\x86;$(LibraryPath)$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);</LibraryPath>
+    <IncludePath>$(ProgramFiles)\Microsoft SDKs\Speech\v11.0\Include;$(KINECTSDK20_DIR)\inc;$(IncludePath);$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(ProgramFiles)\Microsoft SDKs\Speech\v11.0\Lib;$(KINECTSDK20_DIR)\lib\x86;$(LibraryPath)$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);</LibraryPath>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(KINECTSDK20_DIR)\inc;$(IncludePath);$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
@@ -86,7 +88,8 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -137,19 +140,28 @@
   <ItemGroup>
     <ClInclude Include="BodyFrameProvider.h" />
     <ClInclude Include="ConnectionManager.h" />
+    <ClInclude Include="KinectAudioStream.h" />
     <ClInclude Include="KinectProvider.h" />
     <ClInclude Include="KinectThread.h" />
     <ClInclude Include="Server.h" />
+    <ClInclude Include="SpeechHandler.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TCP.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BodyFrameProvider.cpp" />
     <ClCompile Include="ConnectionManager.cpp" />
+    <ClCompile Include="KinectAudioStream.cpp" />
     <ClCompile Include="KinectProvider.cpp" />
     <ClCompile Include="KinectThread.cpp" />
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Main.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="Source.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="SpeechHandler.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="TCP.cpp" />
   </ItemGroup>

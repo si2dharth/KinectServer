@@ -22,8 +22,11 @@ BodyMapThread *BMT = nullptr;
 ///The KinectThread that collects body joint data
 BodyThread *BT = nullptr;
 
-int CITUsers = 0, IITUsers = 0, DMTUsers = 0, BMTUsers = 0, BTUsers = 0;
-mutex cMutex, iMutex, dMutex, bMutex, jMutex;
+///The KinectThread that processes audio and provides speech recognition
+AudioThread *AT = nullptr;
+
+int CITUsers = 0, IITUsers = 0, DMTUsers = 0, BMTUsers = 0, BTUsers = 0, ATUsers = 0;
+mutex cMutex, iMutex, dMutex, bMutex, jMutex, aMutex;
 
 void initAll(KinectProvider *kinect) {
 	setKinectProvider(kinect);					//Ask the global function of the KinectThread header to set the kinect.
@@ -269,4 +272,40 @@ void BodyServer(Client *C) {
 		BT = nullptr;
 	}
 	jMutex.unlock();
+}
+
+void SpeechServer(Client *C) {
+	aMutex.lock();
+	if (!AT) {
+		AT = new AudioThread();
+	}
+	ATUsers++;
+	addConnection(C, "Speech_Recog");
+	aMutex.unlock();
+
+	int id = AT->registerUser();
+
+	string inp;
+	C->receive(inp);
+	auto commands = split(inp);
+	for (auto &s : commands) {
+		AT->addPhrase(id, s);
+	}
+
+	while (true) {
+		string phrase;
+		if (AT->getSpokenPhrase(id, phrase)) {
+			if (C->send(phrase) < 0) break;
+		}
+	}
+
+	AT->unregisterUser(id);
+	aMutex.lock();
+	ATUsers--;
+	removeConnection(C);
+	if (ATUsers == 0) {
+		delete AT;
+		AT = nullptr;
+	}
+	aMutex.unlock();
 }

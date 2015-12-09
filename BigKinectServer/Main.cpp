@@ -7,7 +7,19 @@
 #include <iostream>
 #include <set>
 #include "ConnectionManager.h"
+#include <uuids.h>
+#include "SpeechHandler.h"
+
+#include <sapi.h>
+__pragma(warning(push))
+__pragma(warning(disable:6385 6001)) // Suppress warnings in public SDK header
+#include <sphelper.h>
+__pragma(warning(pop))
 using std::set;
+
+#define INITGUID
+#include <guiddef.h>
+DEFINE_GUID(CLSID_ExpectedRecognizer, 0x495648e7, 0xf7ab, 0x4267, 0x8e, 0x0f, 0xca, 0xfb, 0x7a, 0x33, 0xc1, 0x60);
 
 #include <gdiplus.h>
 #pragma comment(lib,"gdiplus.lib")
@@ -133,6 +145,15 @@ void AdminServer(Client *C) {
 
 //int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdLine, int nShowCmd) {
 int main(int nargs, char **args){
+	bool processSpeech = true;
+	if (CLSID_ExpectedRecognizer != CLSID_SpInprocRecognizer)
+		processSpeech = false;
+
+	if (processSpeech) {
+		HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	}
+
 	ULONG_PTR gplus;
 	calConv();
 	Gdiplus::GdiplusStartupInput gInp;
@@ -149,11 +170,14 @@ int main(int nargs, char **args){
 	MultiClientTCPServer depthMapServer(10003, DepthMapServer, filterFunction);
 	MultiClientTCPServer bodyMapServer(10004, BodyMapServer, filterFunction);
 	MultiClientTCPServer jointMapServer(10005, BodyServer, filterFunction);
+	MultiClientTCPServer speechServer(10006, SpeechServer, filterFunction);
 	
-	MultiClientTCPServer testServer(10000, AdminServer, filterFunction);
+	MultiClientTCPServer adminServer(10000, AdminServer, filterFunction);
 
 	while (true) {
 		Sleep(10);		
 	}
 	Gdiplus::GdiplusShutdown(gplus);
+	if (processSpeech)
+		CoUninitialize();
 }
