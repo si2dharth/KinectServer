@@ -68,9 +68,6 @@
     <ClCompile Include="ConnectionManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="KinectAudioStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
