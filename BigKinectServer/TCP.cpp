@@ -33,16 +33,13 @@ int Client::receive(string & s, string delim)
 {
 	s = "";
 	char recvbuf[2];
+	recvbuf[0] = 0;
 	recvbuf[1] = 0;
 	while (delim.find_first_of(recvbuf[0]) == delim.npos) {
 		int iRes = recv(ClientSocket, recvbuf, 1, 0);
 		
 		if (iRes <= 0) break;
 		if (delim.find_first_of(recvbuf[0]) != delim.npos) break;
-		if (recvbuf[0] == 8) s = s.substr(0, s.length() - 1);
-		if (recvbuf[0] < 32 || recvbuf[0] > 126) continue;
-
-		
 		s += recvbuf;
 	};
 	if (delim.find_first_of(recvbuf[0]) == delim.npos) return -1;
@@ -60,6 +57,11 @@ void Client::close() {
 void Client::disableNagles() {
 	BOOL noDelay = true;
 	setsockopt(ClientSocket, IPPROTO_TCP, TCP_NODELAY, (char*)&noDelay, sizeof(BOOL));
+}
+
+void Client::setTimeout(long timeInMs)
+{
+	setsockopt(ClientSocket, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeInMs, sizeof(timeInMs));
 }
 
 string Client::getIP() {

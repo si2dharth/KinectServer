@@ -284,7 +284,12 @@ void BodyServer(Client *C) {
 	jMutex.unlock();
 }
 
+#include <iostream>
 void SpeechServer(Client *C) {
+	if (ATUsers > 0)
+		return;
+	C->disableNagles();
+
 	aMutex.lock();
 	if (!AT) {
 		AudioThread::initialize();
@@ -297,24 +302,47 @@ void SpeechServer(Client *C) {
 	int id = AT->registerUser();
 
 	string inp;
-	C->receive(inp);
-	auto commands = split(inp);
-	for (auto &s : commands) {
-		AT->addPhrase(id, s);
-	}
+	C->receive(inp,"\r\n");
+	AT->setGrammar(id, split(inp), 1);
+
+	//Set a time-out now.
+	C->setTimeout(10);
+	
+	//AT->setGrammar(id,inp);
+	cout << "Done" << endl;
 
 	while (true) {
 		string phrase;
-		if (AT->getSpokenPhrase(id, phrase)) {
-			if (C->send(phrase) < 0) break;
+
+		//Check for any requests from the client
+		{
+			string request;
+			if (C->receive(request,"\n\r") > 0) {
+				auto unpackedRequest = split(request);
+				C->send(request);
+				if (unpackedRequest[0] == "set") {
+					AT->setGrammar(id, unpackedRequest, 1);
+					cout << "Grammar changed" << endl;
+				}
+				else if (unpackedRequest[0] == "disconnect") {
+					break;
+				}
+			}
 		}
-		if (C->send("") < 0) break;
-		Sleep(5);
+
+		if (AT->getSpokenPhrase(id, phrase)) {
+			cout << "Sending " << phrase << endl;
+			if (C->send(phrase) < 0) break;
+			if (C->send("\n", 1) < 0) break;
+		}
+		//if (C->send("") < 0) break;
+		//Sleep(5);		//No need of sleep as receive has a 10 ms time out anyway
 	}
 
 	AT->unregisterUser(id);
 	aMutex.lock();
 	ATUsers--;
+	C->close();
 	removeConnection(C);
 	if (ATUsers == 0) {
 		delete AT;

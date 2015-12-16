@@ -106,16 +106,72 @@ void SpeechProvider::addToGrammar(string command) {
 	startRecognition();
 }
 
+void SpeechProvider::addToGrammar(vector<string> commands) {
+	while (!initialized) {
+		Sleep(10);
+	}
+	pauseRecognition();
+	for (auto &command : commands) {
+		this->commands.insert(command);
+		speechGrammar->AddWordTransition(initState, NULL, convertToWStr(command).c_str(), NULL, SPWT_LEXICAL, 1.0, NULL);
+	}
+	speechGrammar->Commit(NULL);
+	startRecognition();
+}
+
+void SpeechProvider::setGrammar(queue<string> &grammar, int children, SPSTATEHANDLE curState) {
+	for (int i = 0; i < children; i++) {
+		int gChildren = stoi(grammar.front());
+		grammar.pop();
+		string command = grammar.front();
+		grammar.pop();
+
+		SPSTATEHANDLE newState = NULL;
+		if (gChildren > 0) {
+			speechGrammar->CreateNewState(curState, &newState);
+			setGrammar(grammar, gChildren, newState);
+		}
+		speechGrammar->AddWordTransition(initState, newState, convertToWStr(command).c_str(), NULL, SPWT_LEXICAL, 1.0, NULL);
+	}
+}
+
+void SpeechProvider::setGrammar(string grammarStructure) {
+	pauseRecognition();
+	
+	vector<string> structure = split(grammarStructure);
+	queue<string> q;
+	for (auto s : structure) {
+		q.push(s);
+	}
+	q.pop();	//Remove first number
+	setGrammar(q, stoi(structure[0]), initState);
+
+	startRecognition();
+}
+
 void SpeechProvider::removeFromGrammar(string command) {
 	while (!initialized) {
 		Sleep(10);
 	}
-	///Inefficient and probably slow
+	///Inefficient and slow, but there's no other way
 	pauseRecognition();
 	commands.erase(command);
 	speechGrammar->ClearRule(initState);
 	for (string s : commands) {
 		speechGrammar->AddWordTransition(initState, NULL, convertToWStr(s).c_str(), NULL, SPWT_LEXICAL, 1.0, NULL);
+	}
+	speechGrammar->Commit(NULL);
+	startRecognition();
+}
+
+void SpeechProvider::setNewGrammar(vector<string> commands, int startIndex) {
+	pauseRecognition();
+	commands.clear();
+	speechGrammar->ClearRule(initState);
+	for (int i = startIndex; i < commands.size(); i++) {
+		string &command = commands[i];
+		this->commands.insert(command);
+		speechGrammar->AddWordTransition(initState, NULL, convertToWStr(command).c_str(), NULL, SPWT_LEXICAL, 1.0, NULL);
 	}
 	speechGrammar->Commit(NULL);
 	startRecognition();
@@ -130,6 +186,9 @@ string SpeechProvider::getSpokenWord() {
 	}
 	return "";
 }
+
+#include <iostream>
+using std::wcout;
 
 string SpeechProvider::processSpeech() {
 	const float ConfidenceThreshold = 0.3f;
@@ -156,6 +215,7 @@ string SpeechProvider::processSpeech() {
 				if (SUCCEEDED(hr))
 				{
 					wstring s = pPhrase->pElements->pszDisplayText;
+					wcout << L"Phrase Spoken : " << s << endl;
 					fresult = string(s.begin(), s.end());
 					::CoTaskMemFree(pPhrase);
 				}

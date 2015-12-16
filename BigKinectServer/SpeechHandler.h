@@ -20,6 +20,8 @@ __pragma(warning(pop))
 #include <guiddef.h>
 
 #include <set>
+#include <vector>
+#include <queue>
 using namespace std;
 
 class SpeechProvider {
@@ -43,11 +45,17 @@ class SpeechProvider {
 	void pauseRecognition();
 
 	string processSpeech();
+
+	void setGrammar(queue<string> &grammar, int children, SPSTATEHANDLE curState);
 public:
 	SpeechProvider(KinectProvider *KP);
 	~SpeechProvider();
 	void addToGrammar(string command);
-	void removeFromGrammar(string command);
+	void addToGrammar(vector<string> commands);
 
+	void setGrammar(string grammarStructure);
+
+	void removeFromGrammar(string command);
+	void setNewGrammar(vector<string> commands, int startIndex);
 	string getSpokenWord();
 };

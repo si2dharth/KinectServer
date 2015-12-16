@@ -51,6 +51,9 @@ public:
 	///Disable Nagle's algorithm, allowing fast transmission of small packets
 	void disableNagles();
 
+	///Set a timeout for receive
+	void setTimeout(long timeInMs);
+
 	string getIP();
 };
 

@@ -171,12 +171,15 @@ class AudioThread : public KinectThread {
 	int curUser;
 public:
 	AudioThread();
-	~AudioThread();
+	virtual ~AudioThread();
 	virtual void run();
 
 	int registerUser();
 	void unregisterUser(int userID);
 	void addPhrase(int userID, string phrase);
+	void addPhrases(int userID, vector<string> phrases);
+	void setGrammar(int userID, string grammar);
+	void setGrammar(int userID, vector<string> grammar, int startIndex);
 	bool getSpokenPhrase(int userID, string &phrase);
 
 	static void initialize();

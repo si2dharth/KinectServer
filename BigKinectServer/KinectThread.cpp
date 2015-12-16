@@ -405,7 +405,9 @@ int BodyThread::getNumberOfBodies() {
 
 AudioThread::AudioThread() : KinectThread(), curUser(0) {}
 
-AudioThread::~AudioThread() {}
+AudioThread::~AudioThread() {
+	destroy();
+}
 
 int AudioThread::registerUser() {
 	return curUser++;
@@ -432,9 +434,9 @@ void AudioThread::run() {
 	string s = speechP->getSpokenWord();
 	if (s != "") {
 		q.lock();
-		for (auto &p : spokenWords) {
-			if (phraseDict[p.first].find(s) != phraseDict[p.first].end()) {
-				p.second.push(s);
+		for (auto &p : phraseDict) {
+			if (p.second.find(s) != p.second.end()) {
+				spokenWords[p.first].push(s);
 			}
 		}
 		q.unlock();
@@ -447,6 +449,26 @@ void AudioThread::addPhrase(int userID, string phrase) {
 	speechP->addToGrammar(phrase);
 	edit.unlock();
 	phraseDict[userID].insert(phrase);
+}
+
+void AudioThread::addPhrases(int userID, vector<string> phrases) {
+	edit.lock();
+	speechP->addToGrammar(phrases);
+	for (string &phrase : phrases)
+		phraseDict[userID].insert(phrase);
+	edit.unlock();
+}
+
+void AudioThread::setGrammar(int userID, string grammar) {
+	edit.lock();
+	speechP->setGrammar(grammar);
+	edit.unlock();
+}
+
+void AudioThread::setGrammar(int userID, vector<string> grammar, int startIndex) {
+	edit.lock();
+	speechP->setNewGrammar(grammar,startIndex);
+	edit.unlock();
 }
 
 bool AudioThread::getSpokenPhrase(int userID, string &phrase) {

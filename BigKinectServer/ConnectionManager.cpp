@@ -18,18 +18,21 @@ void addConnection(Client *client, string type) {
 }
 
 void stopConnection(string ip, string type) {
-	for (auto C = connections.begin(); C != connections.end(); C++) {
-		if (C->client->getIP() == ip && C->type == type) {
-			C->client->close();
-			connections.erase(C);
+	for (auto C = connections.begin(); C != connections.end();) {
+		Connection &cur = *C;
+		C++;
+		if (cur.client->getIP() == ip && cur.type == type) {
+			cur.client->close();
+			connections.erase(prev(C));
 		}
 	}
 }
 
 void removeConnection(Client *client) {
 	for (auto C = connections.begin(); C != connections.end();) {
-		if (C->client == client) {
-			C++;
+		Client *cur = C->client;
+		C++;
+		if (cur == client) {
 			connections.erase(prev(C));
 		}
 	}

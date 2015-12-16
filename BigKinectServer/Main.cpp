@@ -52,17 +52,18 @@ bool filterFunction(Client *C, string ip) {
 	cout << "Incoming connection" << endl;
 	if (allowedIPs.find(ip) != allowedIPs.end()) return true;
 	bool allowed = false;
+	C->setTimeout(10000);				///!!!! Affects all clients coming through Filter function
 	while (!allowed) {
 		int i = C->send("Enter password : ");
-		if (i <= 0) return false;
+		if (i <= 0) break;
 		string pass;
 		i = C->receive(pass);
-		if (i <= 0) return false;
-		if (pass == password) return true; 
+		if (i <= 0) break;
+		if (pass == password) break; 
 		else 
 			C->send("Authentication Failed. ");
 	}
-
+	C->setTimeout(0);
 }
 
 void TestServer(Client *C) {
@@ -143,6 +144,25 @@ void AdminServer(Client *C) {
 	removeConnection(C);
 }
 
+#include <conio.h>
+void DebugServer(Client *C) {
+	C->setTimeout(10);
+	string input, msg;
+
+	while (true) {
+		if (C->receive(msg) > 0) {
+			cout << msg << endl;
+		}
+		else if (kbhit()) {
+			char ch[100];
+			cin.getline(ch,100);
+			input = ch;
+			if (C->send(input + "\n"s) < 0) break;
+		}
+	}
+	C->close();
+}
+
 //int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdLine, int nShowCmd) {
 int main(int nargs, char **args){
 	bool processSpeech = true;
@@ -171,6 +191,7 @@ int main(int nargs, char **args){
 	MultiClientTCPServer bodyMapServer(10004, BodyMapServer, filterFunction);
 	MultiClientTCPServer jointMapServer(10005, BodyServer, filterFunction);
 	MultiClientTCPServer speechServer(10006, SpeechServer, filterFunction);
+	//MultiClientTCPServer speechDebugServer(10006, DebugServer);
 	
 	MultiClientTCPServer adminServer(10000, AdminServer, filterFunction);
 
