@@ -23,3 +23,5 @@ void BodyServer(Client *C);
 
 ///
 void SpeechServer(Client *C);
+
+void DebugServer(Client *C);

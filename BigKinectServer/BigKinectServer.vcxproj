@@ -140,6 +140,7 @@
   <ItemGroup>
     <ClInclude Include="BodyFrameProvider.h" />
     <ClInclude Include="ConnectionManager.h" />
+    <ClInclude Include="DebugProvider.h" />
     <ClInclude Include="KinectAudioStream.h" />
     <ClInclude Include="KinectProvider.h" />
     <ClInclude Include="KinectThread.h" />
@@ -151,6 +152,7 @@
   <ItemGroup>
     <ClCompile Include="BodyFrameProvider.cpp" />
     <ClCompile Include="ConnectionManager.cpp" />
+    <ClCompile Include="DebugProvider.cpp" />
     <ClCompile Include="KinectAudioStream.cpp" />
     <ClCompile Include="KinectProvider.cpp" />
     <ClCompile Include="KinectThread.cpp" />
@@ -158,9 +160,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Server.cpp" />
-    <ClCompile Include="Source.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="SpeechHandler.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="TCP.cpp" />

@@ -1,6 +1,7 @@
 #include "Server.h"
 #include "KinectThread.h"
 #include "ConnectionManager.h"
+#include "DebugProvider.h"
 
 #include<string>
 #include<vector>
@@ -65,9 +66,9 @@ void ColorImageServer(Client *C) {
 	CITUsers++;
 	addConnection(C, "Color_Images");
 	cMutex.unlock();
-	
+
 	processClientMessages(CIT, C);
-	
+
 	cMutex.lock();
 	CITUsers--;
 	if (CITUsers == 0) {
@@ -132,7 +133,7 @@ void BodyMapServer(Client *C) {
 		BMT = new BodyMapThread();								//Create a BodyMapThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
 	BMTUsers++;
-	addConnection(C,"Body_Map");
+	addConnection(C, "Body_Map");
 	bMutex.unlock();
 
 	processClientMessages(BMT, C);
@@ -146,6 +147,20 @@ void BodyMapServer(Client *C) {
 		BodyMapThread::finalize();
 	}
 	bMutex.unlock();
+}
+
+void DebugServer(Client *C) {
+	addConnection(C, "Debugger");
+	DebugUser dUser;
+
+	while (true) {
+		string msg = dUser.getNextMsg();
+		if (msg != "") {
+			int i = C->send(msg);
+			if (i <= 0) break;
+		}
+	}
+	removeConnection(C);
 }
 
 map<string, JointType> jointNames = {
@@ -200,7 +215,7 @@ void BodyServer(Client *C) {
 	C->receive(s);
 	vector<string> strs = split(s);
 
-	while (true) {		
+	while (true) {
 		while (clock() - lastSendTime < 16)
 			Sleep(clock() - lastSendTime);
 		OutputDebugString((to_string(clock() - lastSendTime) + "\n"s).c_str());
@@ -211,14 +226,14 @@ void BodyServer(Client *C) {
 			while (strs.size() > i)
 			{
 				JointType query;
-				if (isalpha(strs[i+1][0]))
-					query = jointNames[strs[i+1]];
+				if (isalpha(strs[i + 1][0]))
+					query = jointNames[strs[i + 1]];
 				else
-					query = (JointType)stoi(strs[i+1]);
+					query = (JointType)stoi(strs[i + 1]);
 
 				Joint J;
 				BT->getJoint(&J, stoi(strs[i]), query);
-				
+
 				switch (J.TrackingState) {
 				case TrackingState_Inferred:
 					output.push_back('I');
@@ -240,7 +255,7 @@ void BodyServer(Client *C) {
 					BT->getHandState(&closed, stoi(strs[1]), 2);
 					output.push_back(closed ? 'C' : 'O');
 				}
-				int x, y,z;
+				int x, y, z;
 				x = Clip(32767 + (int)(J.Position.X * 32768 / 0.8));
 				y = Clip(32767 + (int)(J.Position.Y * 32768 / 0.6));
 				z = Clip(32767 + (int)(J.Position.Z * 32768 / 5.00));
@@ -260,7 +275,7 @@ void BodyServer(Client *C) {
 			for (auto c : output) {
 				outputStr[i++] = c;
 			}
-		//	int success = C->send(to_string(output.size()) + "\n"s);
+			//	int success = C->send(to_string(output.size()) + "\n"s);
 			int success = C->send(outputStr, output.size());
 			if (success < 0) break;
 			//OutputDebugString(outputStr);
@@ -302,12 +317,12 @@ void SpeechServer(Client *C) {
 	int id = AT->registerUser();
 
 	string inp;
-	C->receive(inp,"\r\n");
+	C->receive(inp, "\r\n");
 	AT->setGrammar(id, split(inp), 1);
 
 	//Set a time-out now.
 	C->setTimeout(10);
-	
+
 	//AT->setGrammar(id,inp);
 	cout << "Done" << endl;
 
@@ -317,7 +332,7 @@ void SpeechServer(Client *C) {
 		//Check for any requests from the client
 		{
 			string request;
-			if (C->receive(request,"\n\r") > 0) {
+			if (C->receive(request, "\n\r") > 0) {
 				auto unpackedRequest = split(request);
 				C->send(request);
 				if (unpackedRequest[0] == "set") {

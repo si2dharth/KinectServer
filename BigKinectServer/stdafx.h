@@ -9,6 +9,7 @@
 #include <Kinect.h>
 #include <string>
 #include <vector>
+#include "DebugProvider.h"
 #pragma comment(lib, "d2d1.lib")
 
 using namespace std;

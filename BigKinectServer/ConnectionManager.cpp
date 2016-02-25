@@ -1,4 +1,5 @@
 #include "ConnectionManager.h"
+#include "DebugProvider.h"
 #include <list>
 
 struct Connection {
@@ -14,10 +15,12 @@ struct Connection {
 list<Connection> connections;
 
 void addConnection(Client *client, string type) {
+	debugGen << "Connected " << type << " to " << client->getIP() << "\n";
 	connections.push_back(Connection(client, type));
 }
 
 void stopConnection(string ip, string type) {
+	debugGen << "Disconnecting " << type << " from " << ip << "\n";
 	for (auto C = connections.begin(); C != connections.end();) {
 		Connection &cur = *C;
 		C++;
@@ -33,6 +36,7 @@ void removeConnection(Client *client) {
 		Client *cur = C->client;
 		C++;
 		if (cur == client) {
+			debugGen << "Disconnecting " << C->type << " from " << cur->getIP() << "\n";
 			connections.erase(prev(C));
 		}
 	}

@@ -11,6 +11,7 @@ KinectProvider::KinectProvider() :		//Initialize all to nullptr
 	depthFrameReader(nullptr),
 	infraredFrameReader(nullptr)
 {
+	debugGen << "Starting up the Kinect\n";
 	int hr = GetDefaultKinectSensor(&sensor);	//Get the default caonnected sensor in case of more than one sensor
 	if (hr != 0) {								//Failed, meaning sensor was not found
 		sensor = nullptr;
@@ -38,6 +39,7 @@ KinectProvider::~KinectProvider() {
 void KinectProvider::startColorCapture() {
 	///If reader is open, don't do anything
 	if (!colorFrameReader) {
+		debugGen << "Starting color capture\n";
 														//Standard method: Get the source, get reader from source
 		IColorFrameSource *ICS = nullptr;
 		int hr = sensor->get_ColorFrameSource(&ICS);
@@ -55,6 +57,7 @@ void KinectProvider::startColorCapture() {
 void KinectProvider::stopColorCapture() {
 	if (colorFrameReader) {
 		if (--imageUsers > 0) return;
+		debugGen << "Stopping color capture\n";
 		colorFrameReader->Release();
 		colorFrameReader = nullptr;
 	}
@@ -62,6 +65,7 @@ void KinectProvider::stopColorCapture() {
 
 void KinectProvider::startInfraredCapture() {							
 	if (!infraredFrameReader) {
+		debugGen << "Starting infrared capture\n";
 		//Standard method: Get the source, get reader from source		
 		IInfraredFrameSource *IFS = nullptr;
 		int hr = sensor->get_InfraredFrameSource(&IFS);
@@ -79,6 +83,7 @@ void KinectProvider::startInfraredCapture() {
 void KinectProvider::stopInfraredCapture() {
 	if (!infraredFrameReader) return;
 	if (--infraredUsers > 0) return;
+	debugGen << "Stopping infrared capture\n";
 	infraredFrameReader->Release();
 	infraredFrameReader = nullptr;
 }
@@ -86,6 +91,7 @@ void KinectProvider::stopInfraredCapture() {
 void KinectProvider::startBodyDataCapture() {
 	if (!bodyFrameReader) {
 		//Standard method: Get the source, get reader from source
+		debugGen << "Starting body data capture\n";
 		IBodyFrameSource *IBS = nullptr;
 		int hr = sensor->get_BodyFrameSource(&IBS);
 		if (hr != 0) throw error::BodyDataSourceNotReady;
@@ -103,6 +109,7 @@ void KinectProvider::startBodyDataCapture() {
 void KinectProvider::stopBodyDataCapture() {
 	if (!bodyFrameReader) return;
 	if (--bodyUsers > 0) return;
+	debugGen << "Stopping body data capture\n";
 	bodyFrameReader->Release();
 	bodyFrameReader = nullptr;
 }
@@ -110,6 +117,7 @@ void KinectProvider::stopBodyDataCapture() {
 void KinectProvider::startDepthMapCapture() {
 	if (!depthFrameReader) {
 		//Standard method: Get the source, get reader from source
+		debugGen << "Starting depth map capture\n";
 		IDepthFrameSource *IDS = nullptr;
 		int hr = sensor->get_DepthFrameSource(&IDS);
 		if (hr != 0) throw error::DepthMapSourceNotReady;
@@ -126,6 +134,7 @@ void KinectProvider::startDepthMapCapture() {
 void KinectProvider::stopDepthMapCapture() {
 	if (!depthFrameReader) return;
 	if (--depthUsers) return;
+	debugGen << "Stopping depth map capture\n";
 	depthFrameReader->Release();
 	depthFrameReader = nullptr;
 }
@@ -133,6 +142,7 @@ void KinectProvider::stopDepthMapCapture() {
 void KinectProvider::startBodyMapCapture() {
 	if (!bodyMapReader) {
 		//Standard method: Get the source, get reader from source
+		debugGen << "Starting body map capture\n";
 		IBodyIndexFrameSource *IBIS = nullptr;
 		int hr = sensor->get_BodyIndexFrameSource(&IBIS);
 		if (hr != 0) throw error::BodyMapSourceNotReady;
@@ -149,6 +159,7 @@ void KinectProvider::startBodyMapCapture() {
 void KinectProvider::stopBodyMapCapture() {
 	if (!bodyMapReader) return;
 	if (--bodyMapUsers) return;
+	debugGen << "Stopping body map capture\n";
 	bodyMapReader->Release();
 	bodyMapReader = nullptr;
 }
@@ -156,6 +167,7 @@ void KinectProvider::stopBodyMapCapture() {
 void KinectProvider::startAudioCapture() {
 	if (!audioBeamList) {
 		//Standard method: Get the source, get reader from source
+		debugGen << "Starting audio capture\n";
 		IAudioSource *IAS = nullptr;
 		int hr = sensor->get_AudioSource(&IAS);
 		if (hr != 0) throw error::AudioSourceNotReady;
@@ -173,6 +185,7 @@ void KinectProvider::startAudioCapture() {
 void KinectProvider::stopAudioCapture() {
 	if (!audioBeamList) return;
 	if (--audioUsers) return;
+	debugGen << "Stopping audio capture\n";
 	audioBeamList->Release();
 	audioBeamList = nullptr;
 }
@@ -181,29 +194,39 @@ void KinectProvider::stopAudioCapture() {
 
 int KinectProvider::getImage(OUT BYTE **image, OUT UINT &arraySize, bool copy) {
 	if (!colorFrameReader) throw error::ColorCaptureNotStarted;			//Make sure that capture was started
+	debugGen << "Trying to get an image...";
 	IColorFrame *ICF = nullptr;
 	int hr = colorFrameReader->AcquireLatestFrame(&ICF);
-	if (hr != 0) return result::NotReady;
+	if (hr != 0) {
+		debugGen << "Image not ready\n";
+		return result::NotReady;
+	}
 	ICF->AccessRawUnderlyingBuffer(&arraySize, image);					//Access buffer regardless of copy parameter as arraySize is required
 	if (copy) {
 		*image = new BYTE[arraySize];									//Kinect does not manage array
 		ICF->CopyRawFrameDataToArray(arraySize, *image);				
 	}
 	ICF->Release();
+	debugGen << "Done\n";
 	return result::OK;
 }
 
 int KinectProvider::getInfraredImage(OUT UINT16 **image, OUT UINT &arraySize, bool copy) {
 	if (!infraredFrameReader) throw error::InfraredCaptureNotStarted;		//Make sure that capture was started
+	debugGen << "Trying to get an infrared image...";
 	IInfraredFrame *IIF = nullptr;
 	int hr = infraredFrameReader->AcquireLatestFrame(&IIF);
-	if (hr != 0) return result::NotReady;
+	if (hr != 0) {
+		debugGen << "Infrared image not ready\n";
+		return result::NotReady;
+	}
 	IIF->AccessUnderlyingBuffer(&arraySize, image);							//Access buffer regardless of copy parameter as arraySize is required
 	if (copy) {
 		*image = new UINT16[arraySize];										//Kinect does not manage array
 		IIF->CopyFrameDataToArray(arraySize, *image);
 	}
 	IIF->Release();
+	debugGen << "Done\n";
 	return result::OK;
 }
 
@@ -223,43 +246,60 @@ int KinectProvider::getBodyCount(OUT int &bodyCount) {
 
 int KinectProvider::getDepthMap(OUT UINT16 **image, OUT UINT &arraySize, bool copy) {
 	if (!depthFrameReader) throw error::DepthMapCaptureNotStarted;
+	debugGen << "Trying to get depth map frame...";
 	IDepthFrame *IDF = nullptr;
 	int hr = depthFrameReader->AcquireLatestFrame(&IDF);
-	if (hr != 0) return result::NotReady;
+	if (hr != 0) {
+		debugGen << "Depth map not ready\n";
+		return result::NotReady;
+	}
 	IDF->AccessUnderlyingBuffer(&arraySize, image);
 	if (copy) {
 		*image = new UINT16[arraySize];
 		IDF->CopyFrameDataToArray(arraySize, *image);
 	}
 	IDF->Release();
+	debugGen << "Done\n";
 	return result::OK;
 }
 
 int KinectProvider::getBodyMap(OUT BYTE **map, OUT UINT &arraySize, bool copy) {
 	if (!bodyMapReader) throw error::BodyMapCaptureNotStarted;
+	debugGen << "Trying to get body map frame...";
 	IBodyIndexFrame *IBIF = nullptr;
 	int hr = bodyMapReader->AcquireLatestFrame(&IBIF);
-	if (hr != 0) return result::NotReady;
+	if (hr != 0) {
+		debugGen << "Body frame not ready\n";
+		return result::NotReady;
+	}
 	IBIF->AccessUnderlyingBuffer(&arraySize, map);
 	if (copy) {
 		*map = new BYTE[arraySize];
 		IBIF->CopyFrameDataToArray(arraySize, *map);
 	}
 	IBIF->Release();
+	debugGen << "Done\n";
 	return result::OK;
 }
 
 int nBodies = 0;
 int KinectProvider::getBodyData(OUT bool trackStates[], OUT Joint joints[][JointType_Count], OUT HandState handStates[][2]) {
 	if (!bodyFrameReader) throw error::BodyDataCaptureNotStarted;
+	debugGen << "Trying to get body data...";
 	IBodyFrame *IBF = nullptr;
 	int hr = bodyFrameReader->AcquireLatestFrame(&IBF);
-	if (hr != 0) return result::NotReady;
+	if (hr != 0) {
+		debugGen << "Body frame not ready\n";
+		return result::NotReady;
+	}
 	IBody *bodies[BODY_COUNT] = { 0 };
 	IBF->GetAndRefreshBodyData(BODY_COUNT, bodies);
 	for (int i = 0; i < BODY_COUNT; ++i) {
 		BOOLEAN isTracked = false;
-		if (bodies[i]->get_IsTracked(&isTracked) != 0) return result::NotReady;
+		if (bodies[i]->get_IsTracked(&isTracked) != 0) {
+			debugGen << "Body frame not ready\n";
+			return result::NotReady;
+		}
 
 		if (!isTracked) {
 			trackStates[i] = false;
@@ -275,17 +315,23 @@ int KinectProvider::getBodyData(OUT bool trackStates[], OUT Joint joints[][Joint
 		bodies[i]->Release();
 	}
 	IBF->Release();
+	debugGen << "Done\n";
 	return result::OK;
 }
 
 int KinectProvider::getAudioData(int index, OUT IStream *&stream) {
 	if (!audioBeamList) throw error::AudioCaptureNotStarted;
+	debugGen << "Trying to get audio data...";
 	IAudioBeam *audioBeam = nullptr;
 	HRESULT hr;
 	hr = audioBeamList->OpenAudioBeam(index, &audioBeam);
-	if (hr != 0) return result::NotReady;
+	if (hr != 0) {
+		debugGen << "Audio data not ready\n";
+		return result::NotReady;
+	}
 	hr = audioBeam->OpenInputStream(&stream);
 	if (hr != 0) return result::NotReady;
 	audioBeam->Release();
+	debugGen << "Done\n";
 	return result::OK;
 }
