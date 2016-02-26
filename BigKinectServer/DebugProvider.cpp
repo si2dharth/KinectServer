@@ -72,8 +72,9 @@ void DebugGenerator::addMsg(string s) const {
 	std::cout << s;
 }
 
-DebugGenerator &operator <<(const DebugGenerator &dg, string &s) {
+const DebugGenerator &operator <<(const DebugGenerator &dg, const string &s) {
 	dg.addMsg(s);
+	return dg;
 }
 
 DebugUser::DebugUser() {

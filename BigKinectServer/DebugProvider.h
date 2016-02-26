@@ -14,7 +14,7 @@ public:
 	virtual ~DebugGenerator();
 	void addMsg(string s) const;
 
-	friend DebugGenerator &operator << (const DebugGenerator &d, const string &s);
+	friend const DebugGenerator &operator << (const DebugGenerator &d, const string &s);
 };
 
 class DebugUser {

@@ -35,7 +35,6 @@ KinectProvider::~KinectProvider() {
 	if (sensor) sensor->Release();
 }
 
-
 void KinectProvider::startColorCapture() {
 	///If reader is open, don't do anything
 	if (!colorFrameReader) {

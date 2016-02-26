@@ -32,12 +32,12 @@ bool settingsLoaded = false;
 
 void loadSettings() {
 	ifstream settingsFile("conf.txt");
-	if (settingsFile.bad()) {
+	if (settingsFile.bad() || !settingsFile.is_open()) {
 		debugGen << "Conf file not found. Add conf.txt to current directory\n";
 	}
 	else {
 		settingsFile >> password;
-		debugGen << "Password : " << password << "\nIPs allowed to connect: ";
+		debugGen << "Password : " << password << "\nIPs allowed to connect: \n";
 		while (settingsFile) {
 			string s;
 			settingsFile >> s;
