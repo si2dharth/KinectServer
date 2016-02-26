@@ -62,7 +62,6 @@ void saveSettings() {
 }
 
 bool filterFunction(Client *C, string ip) {
-	cout << "Incoming connection" << endl;
 	debugGen << "Incoming connection..." << ip << "\n";
 	if (!settingsLoaded) {
 		debugGen << "!!! conf file does not exist. Allowed by default !!!\n";
@@ -76,7 +75,7 @@ bool filterFunction(Client *C, string ip) {
 	C->setTimeout(10000);				///!!!! Affects all clients coming through Filter function
 	while (!allowed) {
 		debugGen << "Waiting for password...\n";
-		int i = C->send("Enter password : ");
+		int i = C->send(" Enter password : ");
 		if (i <= 0) {
 			debugGen << "Client disconnected\n";
 			break;

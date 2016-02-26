@@ -19,7 +19,9 @@ BodyFrameProvider::~BodyFrameProvider() {
 }
 
 void BodyFrameProvider::updateFrame() {
-	while (_kinect->getBodyData(tmp_trackState, tmp_joints, tmp_handStates) != KinectProvider::result::OK);
+	while (_kinect->getBodyData(tmp_trackState, tmp_joints, tmp_handStates) != KinectProvider::result::OK) {
+		Sleep(10);
+	}
 }
 
 void BodyFrameProvider::updateData() {

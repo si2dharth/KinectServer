@@ -194,6 +194,7 @@ void DebugServer(Client *C) {
 			int i = C->send(msg);
 			if (i <= 0) break;
 		}
+		Sleep(10);
 	}
 	removeConnection(C);
 }

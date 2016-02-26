@@ -6,6 +6,12 @@ using std::string;
 using std::ostream;
 using std::queue;
 
+#define debugGen debug_Gen()
+
+#define DeepDebug FALSE
+
+#define debugGen2 if (DeepDebug) debug_Gen()
+
 class DebugProvider;
 
 class DebugGenerator {
@@ -29,10 +35,4 @@ public:
 
 
 DebugGenerator &debug_Gen();
-#define debugGen debug_Gen()
 
-#ifdef DeepDebug
-#define debugGen2 debug_Gen()
-#else
-#define debugGen2  ;
-#endif

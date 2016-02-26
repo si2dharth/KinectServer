@@ -213,7 +213,9 @@ BYTE* convertToJPEG(BYTE* RGBArray, UINT &length) {
 #include <ctime>
 void *ColorImageThread::collectImage(UINT &capacity) {
 	BYTE *image = nullptr;
-	while (_kinect->getImage(&image, capacity, true) != _kinect->OK);		//Wait until a new image is received
+	while (_kinect->getImage(&image, capacity, true) != _kinect->OK) {		//Wait until a new image is received
+		Sleep(10);
+	}	
 	BYTE *imageRGB = new BYTE[capacity * 3 / 2];							//RGB is 6/4 = 3/2 times bigger than YUV2 image
 	UINT iR = 0;
 	for (int i = 0; i < capacity; i += 4, iR += 6) {
@@ -251,7 +253,9 @@ InfraredImageThread::~InfraredImageThread() {
 
 void *InfraredImageThread::collectImage(UINT &cap) {
 	UINT16 *image = nullptr;
-	while (_kinect->getInfraredImage(&image, cap, true) != _kinect->OK);		//Wait till image is successfully obtained
+	while (_kinect->getInfraredImage(&image, cap, true) != _kinect->OK) {		//Wait till image is successfully obtained
+		Sleep(10);
+	};		
 	cap *= sizeof(UINT16);
 	return image;
 }
@@ -281,7 +285,9 @@ DepthMapThread::~DepthMapThread() {
 
 void *DepthMapThread::collectImage(UINT &cap) {
 	UINT16 *image = nullptr;
-	while (_kinect->getDepthMap(&image, cap, true) != _kinect->OK);			//Wait till map is successfully obtained
+	while (_kinect->getDepthMap(&image, cap, true) != _kinect->OK) {		//Wait till map is successfully obtained
+		Sleep(10);
+	};			
 	cap *= sizeof(UINT16);
 	return image;
 }
@@ -302,9 +308,7 @@ void BodyMapThread::finalize() {
 	_kinect->stopBodyMapCapture();
 }
 
-BodyMapThread::BodyMapThread() : ImageThread() {
-	//_kinect->startBodyMapCapture();
-}
+BodyMapThread::BodyMapThread() : ImageThread() {}
 
 BodyMapThread::~BodyMapThread() {
 	destroy();
@@ -314,7 +318,9 @@ BodyMapThread::~BodyMapThread() {
 void *BodyMapThread::collectImage(UINT &cap) {
 	BYTE *image = nullptr;
 	BYTE *compressedImage = nullptr;
-	while (_kinect->getBodyMap(&image, cap, true) != _kinect->OK);				//Wait till map is successfully obtained.
+	while (_kinect->getBodyMap(&image, cap, true) != _kinect->OK) {				//Wait till map is successfully obtained.
+		Sleep(10);
+	}
 	compressedImage = new BYTE[cap / 2];
 	cap *= sizeof(BYTE);
 	for (int i = 0; i < cap; i += 2) {
