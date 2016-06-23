@@ -9,6 +9,7 @@
 #include "ConnectionManager.h"
 #include <uuids.h>
 #include "SpeechHandler.h"
+#include "DebugProvider.h"
 
 #include <sapi.h>
 __pragma(warning(push))
@@ -27,47 +28,75 @@ DEFINE_GUID(CLSID_ExpectedRecognizer, 0x495648e7, 0xf7ab, 0x4267, 0x8e, 0x0f, 0x
 set<string> allowedIPs;
 string password;
 
+bool settingsLoaded = false;
+
 void loadSettings() {
 	ifstream settingsFile("conf.txt");
-	settingsFile >> password;
-	while (settingsFile) {
-		string s;
-		settingsFile >> s;
-		if (!settingsFile) break;
-		allowedIPs.insert(s);
+	if (settingsFile.bad() || !settingsFile.is_open()) {
+		debugGen << "Conf file not found. Add conf.txt to current directory\n";
 	}
-	settingsFile.close();
+	else {
+		settingsFile >> password;
+		debugGen << "Password : " << password << "\nIPs allowed to connect: \n";
+		while (settingsFile) {
+			string s;
+			settingsFile >> s;
+			if (!settingsFile) break;
+			debugGen << s << "\n";
+			allowedIPs.insert(s);
+		}
+		settingsLoaded = true;
+		settingsFile.close();
+	}
 }
 
 void saveSettings() {
 	ofstream settingsFile("conf.txt");
+	debugGen << "Saving settings...\n";
 	settingsFile << password << endl;
 	for (auto ip : allowedIPs) {
 		settingsFile << ip << endl;
 	}
 	settingsFile.close();
+	debugGen << "Done\n";
 }
 
 bool filterFunction(Client *C, string ip) {
-	cout << "Incoming connection" << endl;
-	if (allowedIPs.find(ip) != allowedIPs.end()) return true;
+	debugGen << "Incoming connection..." << ip << "\n";
+	if (!settingsLoaded) {
+		debugGen << "!!! conf file does not exist. Allowed by default !!!\n";
+		return true;
+	}
+	if (allowedIPs.find(ip) != allowedIPs.end()) {
+		debugGen << "Allowed to connect without password\n";
+		return true;
+	}
 	bool allowed = false;
 	C->setTimeout(10000);				///!!!! Affects all clients coming through Filter function
 	while (!allowed) {
-		int i = C->send("Enter password : ");
-		if (i <= 0) break;
+		debugGen << "Waiting for password...\n";
+		int i = C->send(" Enter password : ");
+		if (i <= 0) {
+			debugGen << "Client disconnected\n";
+			break;
+		}
 		string pass;
 		i = C->receive(pass);
-		if (i <= 0) break;
-		if (pass == password) break; 
-		else 
+		if (i <= 0) {
+			debugGen << "Client disconnected due to timeout\n";
+			break;
+		}
+		if (pass == password) {
+			debugGen << "Password correct\n";
+			break;
+		}
+		else {
+			debugGen << "Password does not match\n";
 			C->send("Authentication Failed. ");
+		}
 	}
 	C->setTimeout(0);
-}
-
-void TestServer(Client *C) {
-	cout << "HELLO" << endl;
+	return allowed;
 }
 
 void AdminServer(Client *C) {
@@ -75,17 +104,23 @@ void AdminServer(Client *C) {
 	addConnection(C, "Admin");
 	do {
 		C->send(">");
-		if (C->receive(line) <= 0) break;
+		if (C->receive(line) <= 0) {
+			debugGen << "Error : Admin connection lost from " << C->getIP() << "\n";
+			break;
+		}
 
 		vector<string> command = split(line, ' ');
 		if (command[0][0] == '\n' || command[0][0] == '\r') continue;
 		cout << command[0] << endl;
+		debugGen << "Admin: " << C->getIP() << "; Command : " << command[0] << "\n";
+
 		if (command[0] == "list") {
 			for (auto ip : allowedIPs)
 				C->send(ip + "\r\n"s);
 		}
 		else if (command[0] == "add") {
 			if (command.size() == 2) {
+				debugGen << "Admin: Adding " << command[1] << " to allowed IPs\n";
 				allowedIPs.insert(command[1]);
 				saveSettings();
 				C->send("Added "s + command[1] + "\r\n"s);
@@ -96,6 +131,7 @@ void AdminServer(Client *C) {
 		}
 		else if (command[0] == "remove") {
 			if (command.size() == 2) {
+				debugGen << "Admin: Removing " << command[1] << " from allowed IPs\n";
 				allowedIPs.erase(command[1]);
 				saveSettings();
 				C->send("Removed "s + command[1] + "\r\n"s);
@@ -107,6 +143,7 @@ void AdminServer(Client *C) {
 		else if (command[0] == "password") {
 			if (command.size() == 3) {
 				if (command[1] == command[2]) {
+					debugGen << "Admin: Changing password to " << command[2] << "\n";
 					password = command[1];
 					saveSettings();
 					C->send("Password changed\r\n");
@@ -121,14 +158,19 @@ void AdminServer(Client *C) {
 		}
 		else if (command[0] == "connections") {
 			if (command.size() == 1) {
+				debugGen << "Sending list of connected clients\n";
 				vector<pair<string, string>> connectionList = getConnections();
 				for (auto &p : connectionList) {
 					C->send(p.first + "\t\t" + p.second + "\r\n");
 				}
 			}
+			else {
+				C->send("Incorrect usage.\r\nUsage: connections");
+			}
 		}
 		else if (command[0] == "kick") {
 			if (command.size() == 3) {
+				debugGen << "Admin: Kicking off " << command[1] << " from " << command[2] << " server\n";
 				stopConnection(command[1], command[2]);
 				C->send(command[1] + " kicked\r\n");
 			}
@@ -144,25 +186,6 @@ void AdminServer(Client *C) {
 	removeConnection(C);
 }
 
-#include <conio.h>
-void DebugServer(Client *C) {
-	C->setTimeout(10);
-	string input, msg;
-
-	while (true) {
-		if (C->receive(msg) > 0) {
-			cout << msg << endl;
-		}
-		else if (kbhit()) {
-			char ch[100];
-			cin.getline(ch,100);
-			input = ch;
-			if (C->send(input + "\n"s) < 0) break;
-		}
-	}
-	C->close();
-}
-
 //int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE prevInstance, LPWSTR lpCmdLine, int nShowCmd) {
 int main(int nargs, char **args){
 	bool processSpeech = true;
@@ -171,7 +194,9 @@ int main(int nargs, char **args){
 
 	if (processSpeech) {
 		HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
+	}
+	else {
+		debugGen << "Speech processor off\n";
 	}
 
 	ULONG_PTR gplus;
@@ -185,16 +210,32 @@ int main(int nargs, char **args){
 	KinectProvider kinect;
 	initAll(&kinect);
 	Sleep(1000);
+
+	debugGen << "Starting Image server...\n";
 	MultiClientTCPServer colorServer(10001, ColorImageServer, filterFunction);
+
+	debugGen << "Starting Infrared image server...\n";
 	MultiClientTCPServer infraredServer(10002, InfraredImageServer, filterFunction);
+
+	debugGen << "Starting Depth map server...\n";
 	MultiClientTCPServer depthMapServer(10003, DepthMapServer, filterFunction);
+
+	debugGen << "Starting Body map server...\n";
 	MultiClientTCPServer bodyMapServer(10004, BodyMapServer, filterFunction);
+
+	debugGen << "Starting Body skeleton server...\n";
 	MultiClientTCPServer jointMapServer(10005, BodyServer, filterFunction);
+
+	debugGen << "Starting Speed recognition server...\n";
 	MultiClientTCPServer speechServer(10006, SpeechServer, filterFunction);
-	//MultiClientTCPServer speechDebugServer(10006, DebugServer);
+
+	debugGen << "Starting Debug server(unprotected)...\n";
+	MultiClientTCPServer debugServer(10007, DebugServer);
 	
+	debugGen << "Starting Admin server...\n";
 	MultiClientTCPServer adminServer(10000, AdminServer, filterFunction);
 
+	debugGen << "All servers started\n";
 	while (true) {
 		Sleep(10);		
 	}

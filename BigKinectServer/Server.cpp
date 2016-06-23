@@ -1,6 +1,7 @@
 #include "Server.h"
 #include "KinectThread.h"
 #include "ConnectionManager.h"
+#include "DebugProvider.h"
 
 #include<string>
 #include<vector>
@@ -37,9 +38,13 @@ void processClientMessages(ImageThread *IT, Client *C) {
 	while (true) {												//Repeat forever
 		string s;
 		int nChar = C->receive(s);								//Get command from client
-		if (nChar <= 0) break;									//Client seems to be disconnected.
+		if (nChar <= 0) {											//Client seems to be disconnected.
+			debugGen << C->getIP() << " disconnected\n";
+			break;
+		}
 		if (s == "get")											//To get an image, the client sends "get"
 		{
+			debugGen << C->getIP() << " : get\n";
 			void *img = nullptr;
 			UINT capacity = 0;
 			while (capacity == 0 || img == nullptr)
@@ -49,7 +54,10 @@ void processClientMessages(ImageThread *IT, Client *C) {
 			i = C->send((char*)img, capacity);					//Send the entire image
 			delete[] img;										//Delete the copy
 			img = 0;
-			if (i < 0) break;									//If sending failed, disconnect from client and stop thread.
+			if (i < 0) {										//If sending failed, disconnect from client and stop thread.
+				debugGen << C->getIP() << " disconnected\n";
+				break;
+			}
 		}
 		else if (s == "disconnect") break;						//If client sends "disconnect", disconnect from client and stop thread.
 	}
@@ -57,20 +65,26 @@ void processClientMessages(ImageThread *IT, Client *C) {
 }
 
 void ColorImageServer(Client *C) {
+	debugGen << C->getIP() << " successfully connected to Color image server\n";
 	cMutex.lock();
 	if (CIT == nullptr) {
+		debugGen << "Starting a color image collection thread...\n";
 		ColorImageThread::initialize();
 		CIT = new ColorImageThread();							//Create a ColorImageThread if it hasn't been created yet. This way, a thread is started only if it is required
+	}
+	else {
+		debugGen << "Using existing color image collection thread...\n";
 	}
 	CITUsers++;
 	addConnection(C, "Color_Images");
 	cMutex.unlock();
-	
+
 	processClientMessages(CIT, C);
-	
+
 	cMutex.lock();
 	CITUsers--;
 	if (CITUsers == 0) {
+		debugGen << "Last client disconnected from Color image server. Shutting down thread...\n";
 		delete CIT;
 		CIT = nullptr;
 		ColorImageThread::finalize();
@@ -80,10 +94,15 @@ void ColorImageServer(Client *C) {
 }
 
 void InfraredImageServer(Client *C) {
+	debugGen << C->getIP() << " successfully connected to Infrared image server\n";
 	iMutex.lock();
 	if (!IIT) {
+		debugGen << "Starting a infrared image collection thread...\n";
 		InfraredImageThread::initialize();
 		IIT = new InfraredImageThread();						//Create a InfraredImageThread if it hasn't been created yet. This way, a thread is started only if it is required	
+	}
+	else {
+		debugGen << "Using existing infrared image collection thread...\n";
 	}
 	IITUsers++;
 	addConnection(C, "Infrared_Images");
@@ -95,6 +114,7 @@ void InfraredImageServer(Client *C) {
 	IITUsers--;
 	removeConnection(C);
 	if (IITUsers == 0) {
+		debugGen << "Last client disconnected from Infrared image server. Shutting down thread...\n";
 		delete IIT;
 		IIT = nullptr;
 		InfraredImageThread::finalize();
@@ -103,10 +123,16 @@ void InfraredImageServer(Client *C) {
 }
 
 void DepthMapServer(Client *C) {
+	debugGen << C->getIP() << " successfully connected to Depth map server\n";
+
 	dMutex.lock();
 	if (!DMT) {
+		debugGen << "Starting a depth map collection thread...\n";
 		DepthMapThread::initialize();
 		DMT = new DepthMapThread();								//Create a DepthMapThread if it hasn't been created yet. This way, a thread is started only if it is required
+	}
+	else {
+		debugGen << "Using existing depth map collection thread...\n";
 	}
 	DMTUsers++;
 	addConnection(C, "Depth_Map");
@@ -118,6 +144,7 @@ void DepthMapServer(Client *C) {
 	DMTUsers--;
 	removeConnection(C);
 	if (DMTUsers == 0) {
+		debugGen << "Last client disconnected from depth map server. Shutting down thread...\n";
 		delete DMT;
 		DMT = nullptr;
 		DepthMapThread::finalize();
@@ -126,13 +153,19 @@ void DepthMapServer(Client *C) {
 }
 
 void BodyMapServer(Client *C) {
+	debugGen << C->getIP() << " successfully connected to Body map server\n";
+
 	bMutex.lock();
 	if (!BMT) {
+		debugGen << "Starting a body map collection thread...\n";
 		BodyMapThread::initialize();
 		BMT = new BodyMapThread();								//Create a BodyMapThread if it hasn't been created yet. This way, a thread is started only if it is required
 	}
+	else {
+		debugGen << "Using existing body map collection thread...\n";
+	}
 	BMTUsers++;
-	addConnection(C,"Body_Map");
+	addConnection(C, "Body_Map");
 	bMutex.unlock();
 
 	processClientMessages(BMT, C);
@@ -141,11 +174,29 @@ void BodyMapServer(Client *C) {
 	BMTUsers--;
 	removeConnection(C);
 	if (BMTUsers == 0) {
+		debugGen << "Last client disconnected from body map server. Shutting down thread...\n";
 		delete BMT;
 		BMT = nullptr;
 		BodyMapThread::finalize();
 	}
 	bMutex.unlock();
+}
+
+void DebugServer(Client *C) {
+	debugGen << C->getIP() << " successfully connected to debug server\n";
+
+	addConnection(C, "Debugger");
+	DebugUser dUser;
+
+	while (true) {
+		string msg = dUser.getNextMsg();
+		if (msg != "") {
+			int i = C->send(msg);
+			if (i <= 0) break;
+		}
+		Sleep(10);
+	}
+	removeConnection(C);
 }
 
 map<string, JointType> jointNames = {
@@ -185,11 +236,17 @@ int Clip(int i) {
 }
 
 void BodyServer(Client *C) {
+	debugGen << C->getIP() << " successfully connected to Body skeleton server\n";
+
 	jMutex.lock();
 	if (!BT) {
+		debugGen << "Starting a body skeleton data collection thread...\n";
 		BodyThread::initialize();
 		BT = new BodyThread();
 		//Sleep(1000);
+	}
+	else {
+		debugGen << "Using existing body skeleton collection thread...\n";
 	}
 	BTUsers++;
 	addConnection(C, "Skeleton_Data");
@@ -198,27 +255,31 @@ void BodyServer(Client *C) {
 	clock_t lastSendTime = clock();
 	string s;
 	C->receive(s);
+	debugGen << "Skeleton Server: " << C->getIP() << " : " << s << "\n";
 	vector<string> strs = split(s);
-
-	while (true) {		
-		while (clock() - lastSendTime < 16)
-			Sleep(clock() - lastSendTime);
-		OutputDebugString((to_string(clock() - lastSendTime) + "\n"s).c_str());
-		lastSendTime = clock();
-		if (strs[0] == "get") {
+	if (strs[0] != "get") {
+		debugGen << "Skeleton Server: " << C->getIP() << " : " << "Invalid command: " << strs[0] << ". Should be get. Disconnecting\n";
+	}
+	else {
+		while (true) {
+			while (clock() - lastSendTime < 16) {
+				Sleep(clock() - lastSendTime);
+			}
+			OutputDebugString((to_string(clock() - lastSendTime) + "\n"s).c_str());
+			lastSendTime = clock();
 			int i = 1;
 			vector<char> output;
 			while (strs.size() > i)
 			{
 				JointType query;
-				if (isalpha(strs[i+1][0]))
-					query = jointNames[strs[i+1]];
+				if (isalpha(strs[i + 1][0]))
+					query = jointNames[strs[i + 1]];
 				else
-					query = (JointType)stoi(strs[i+1]);
+					query = (JointType)stoi(strs[i + 1]);
 
 				Joint J;
 				BT->getJoint(&J, stoi(strs[i]), query);
-				
+
 				switch (J.TrackingState) {
 				case TrackingState_Inferred:
 					output.push_back('I');
@@ -240,7 +301,7 @@ void BodyServer(Client *C) {
 					BT->getHandState(&closed, stoi(strs[1]), 2);
 					output.push_back(closed ? 'C' : 'O');
 				}
-				int x, y,z;
+				int x, y, z;
 				x = Clip(32767 + (int)(J.Position.X * 32768 / 0.8));
 				y = Clip(32767 + (int)(J.Position.Y * 32768 / 0.6));
 				z = Clip(32767 + (int)(J.Position.Z * 32768 / 5.00));
@@ -253,23 +314,18 @@ void BodyServer(Client *C) {
 				i += 2;
 			}
 
-
-
 			char *outputStr = new char[output.size()];
 			i = 0;
 			for (auto c : output) {
 				outputStr[i++] = c;
 			}
-		//	int success = C->send(to_string(output.size()) + "\n"s);
+			//	int success = C->send(to_string(output.size()) + "\n"s);
 			int success = C->send(outputStr, output.size());
-			if (success < 0) break;
+			if (success < 0) {
+				debugGen << "Skeleton Server: " << C->getIP() << " disconnected\n";
+				break;
+			}
 			//OutputDebugString(outputStr);
-		}
-		else if (strs[0] == "getNum") {
-			C->send(to_string(BT->getNumberOfBodies()) + "\n"s);
-		}
-		else if (strs[0] == "disconnect") {
-			break;
 		}
 	}
 
@@ -277,6 +333,7 @@ void BodyServer(Client *C) {
 	BTUsers--;
 	removeConnection(C);
 	if (BTUsers == 0) {
+		debugGen << "Last client disconnected from body skeleton server. Shutting down thread...\n";
 		delete BT;
 		BT = nullptr;
 		BodyThread::finalize();
@@ -286,14 +343,23 @@ void BodyServer(Client *C) {
 
 #include <iostream>
 void SpeechServer(Client *C) {
-	if (ATUsers > 0)
+	if (ATUsers > 0) {
+		debugGen << "Only one client can use audio at a time. Access denied to " << C->getIP() << "\n";
 		return;
+	}
 	C->disableNagles();
+
+	debugGen << C->getIP() << " successfully connected to Audio server\n";
 
 	aMutex.lock();
 	if (!AT) {
+		debugGen << "Starting a audio collection thread...\n";
 		AudioThread::initialize();
 		AT = new AudioThread();
+	}
+	else {
+		debugGen << "Using existing audio collection thread...\n";
+		debugGen << "!!! WARNING !!! There should never be an existing thread. Only one user is allowed !!!";
 	}
 	ATUsers++;
 	addConnection(C, "Speech_Recog");
@@ -308,7 +374,7 @@ void SpeechServer(Client *C) {
 
 	//Set a time-out now.
 	C->setTimeout(10);
-	
+
 	//AT->setGrammar(id,inp);
 	cout << "Done" << endl;
 
@@ -318,7 +384,7 @@ void SpeechServer(Client *C) {
 		//Check for any requests from the client
 		{
 			string request;
-			if (C->receive(request,"\n\r") > 0) {
+			if (C->receive(request, "\n\r") > 0) {
 				auto unpackedRequest = split(request);
 				//C->send(request);
 				if (unpackedRequest[0] == "set") {
@@ -346,9 +412,13 @@ void SpeechServer(Client *C) {
 	C->close();
 	removeConnection(C);
 	if (ATUsers == 0) {
+		debugGen << "Last client disconnected from audio server. Shutting down thread...\n";
 		delete AT;
 		AT = nullptr;
 		AudioThread::finalize();
+	}
+	else {
+		debugGen << "!!! WARNING !!! More than one user on audio server !!!\n";
 	}
 	aMutex.unlock();
 }
