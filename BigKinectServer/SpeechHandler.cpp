@@ -164,13 +164,17 @@ void SpeechProvider::removeFromGrammar(string command) {
 	startRecognition();
 }
 
+#include <iostream>
 void SpeechProvider::setNewGrammar(vector<string> commands, int startIndex) {
 	pauseRecognition();
-	commands.clear();
+	this->commands.clear();
 	speechGrammar->ClearRule(initState);
+	cout << "HERE " << startIndex << " " << commands.size() << endl;
 	for (int i = startIndex; i < commands.size(); i++) {
+		cout << "COMMAND" << endl;
 		string &command = commands[i];
 		this->commands.insert(command);
+		cout << command << endl;
 		speechGrammar->AddWordTransition(initState, NULL, convertToWStr(command).c_str(), NULL, SPWT_LEXICAL, 1.0, NULL);
 	}
 	speechGrammar->Commit(NULL);

@@ -303,6 +303,7 @@ void SpeechServer(Client *C) {
 
 	string inp;
 	C->receive(inp,"\r\n");
+	cout << inp << endl;
 	AT->setGrammar(id, split(inp), 1);
 
 	//Set a time-out now.
@@ -319,7 +320,7 @@ void SpeechServer(Client *C) {
 			string request;
 			if (C->receive(request,"\n\r") > 0) {
 				auto unpackedRequest = split(request);
-				C->send(request);
+				//C->send(request);
 				if (unpackedRequest[0] == "set") {
 					AT->setGrammar(id, unpackedRequest, 1);
 					cout << "Grammar changed" << endl;
@@ -332,8 +333,8 @@ void SpeechServer(Client *C) {
 
 		if (AT->getSpokenPhrase(id, phrase)) {
 			cout << "Sending " << phrase << endl;
-			if (C->send(phrase) < 0) break;
-			if (C->send("\n", 1) < 0) break;
+			if (C->send(phrase + "\n") < 0) break;
+			//if (C->send("\n", 1) < 0) break;
 		}
 		//if (C->send("") < 0) break;
 		//Sleep(5);		//No need of sleep as receive has a 10 ms time out anyway
