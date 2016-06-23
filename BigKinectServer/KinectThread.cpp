@@ -473,6 +473,10 @@ void AudioThread::setGrammar(int userID, string grammar) {
 
 void AudioThread::setGrammar(int userID, vector<string> grammar, int startIndex) {
 	edit.lock();
+	phraseDict[userID].clear();
+	for (int i = startIndex; i < grammar.size(); i++) {
+		phraseDict[userID].insert(grammar[i]);
+	}
 	speechP->setNewGrammar(grammar,startIndex);
 	edit.unlock();
 }
